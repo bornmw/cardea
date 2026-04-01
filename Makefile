@@ -3,7 +3,7 @@ VERSION=$(shell grep -m 1 "Version:" cardea.php | awk '{print $$NF}')
 # Use PWD so Docker volume mounts work reliably across different OS environments
 PWD=$(shell pwd)
 
-.PHONY: build install test-jest test-phpunit test-e2e test package clean
+.PHONY: build install test-jest test-phpunit test-e2e test package clean lint
 
 # ==========================================
 # ENVIRONMENT BUILD
@@ -11,6 +11,13 @@ PWD=$(shell pwd)
 build:
 	@echo "Building the unified development image..."
 	docker build -t cardea-dev .
+
+# ==========================================
+# LOCAL VALIDATION
+# ==========================================
+lint:
+	@echo "Running WordPress Coding Standards check..."
+	docker run --rm -v $(PWD):/app cardea-dev sh -c "git config --global --add safe.directory /app && composer phpcs"
 
 # ==========================================
 # DEPENDENCIES (Runs via Ephemeral Docker)
