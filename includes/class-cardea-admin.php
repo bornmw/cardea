@@ -17,6 +17,10 @@
  * @package Cardea
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Admin settings page for Cardea PoW configuration.
  *

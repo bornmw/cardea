@@ -17,6 +17,10 @@
  * @package Cardea
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Core logic for Cardea PoW challenge generation and verification.
  *

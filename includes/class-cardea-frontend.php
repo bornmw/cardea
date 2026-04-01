@@ -17,6 +17,10 @@
  * @package Cardea
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Frontend integration for displaying Cardea PoW challenge in comment form.
  *
