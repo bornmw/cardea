@@ -1,0 +1,8 @@
+.playwright-browsers/
+node_modules/
+vendor/
+dist/
+playwright-report/
+test-results/
+.git/
+

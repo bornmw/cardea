@@ -1,0 +1,30 @@
+{
+    "name": "olegmikheev/cardea",
+    "description": "Lightweight, zero-dependency Proof-of-Work anti-spam protection for WordPress comments",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "yoast/phpunit-polyfills": "^2.0",
+        "phpcompatibility/php-compatibility": "^9.3",
+        "wp-coding-standards/wpcs": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cardea\\": "includes/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "phpcs": "phpcs --standard=WordPress --ignore=vendor/,node_modules/,tests/ --extensions=php .",
+        "phpcbf": "phpcbf --standard=WordPress --ignore=vendor/,node_modules/,tests/ --extensions=php ."
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

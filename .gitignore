@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Local Caches & Browsers
+.playwright-browsers/
+.phpunit.result.cache
+
+# Build Artifacts & Testing Reports
+dist/
+playwright-report/
+test-results/
+
+# System Files
+.DS_Store
+
