@@ -1,6 +1,5 @@
 === Cardea - Proof-of-Work Comment Spam Protection ===
-Contributors: olegmikheev
-Donate link: https://olegmikheev.com/donate
+Contributors: omikheev
 Tags: comments, spam, protection, proof-of-work, anti-spam
 Requires at least: 6.0
 Requires PHP: 7.4
