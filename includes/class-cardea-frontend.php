@@ -115,7 +115,7 @@ class Cardea_Frontend {
 
 		$worker_path = CARDEA_PLUGIN_DIR . 'assets/js/pow-worker.js';
 		if ( file_exists( $worker_path ) ) {
-			$worker_code = file_get_contents( $worker_path );
+			$worker_code = file_get_contents( $worker_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 			?>
 			<script type="text/javascript">
 				(function() {
