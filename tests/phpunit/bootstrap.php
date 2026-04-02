@@ -128,6 +128,39 @@ function wp_die( $message = '', $title = '', $args = array() ) {
 	throw new Exception( $message );
 }
 
+global $current_user;
+$current_user = null;
+
+function current_user_can( $capability, ...$args ) {
+	global $current_user;
+	if ( $current_user === null ) {
+		return false;
+	}
+	if ( isset( $current_user->caps[ $capability ] ) ) {
+		return (bool) $current_user->caps[ $capability ];
+	}
+	if ( isset( $current_user->allcaps[ $capability ] ) ) {
+		return (bool) $current_user->allcaps[ $capability ];
+	}
+	return false;
+}
+
+function is_user_logged_in() {
+	global $current_user;
+	return $current_user !== null;
+}
+
+class WP_User {
+	public $caps = array();
+	public $allcaps = array();
+	public $roles = array();
+
+	public function __construct( $user_id = 0, $name = '', $email = '' ) {
+		$this->caps = array();
+		$this->allcaps = array();
+	}
+}
+
 global $wp_filters;
 $wp_filters = array();
 

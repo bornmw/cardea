@@ -280,6 +280,206 @@ class Cardea_Core_Test extends PHPUnit\Framework\TestCase {
 	}
 
 	/**
+	 * Test verify_comment_pow bypasses for users with moderate_comments capability.
+	 */
+	public function test_verify_comment_pow_bypasses_for_moderator() {
+		global $current_user;
+		$current_user = new WP_User();
+		$current_user->caps = array( 'moderate_comments' => true );
+
+		$_POST['cardea_nonce'] = '';
+
+		$commentdata = array( 'comment_post_ID' => 1 );
+		$result = $this->core->verify_comment_pow( $commentdata );
+
+		$this->assertEquals( $commentdata, $result );
+
+		$_POST = array();
+		$current_user = null;
+	}
+
+	/**
+	 * Test verify_comment_pow bypasses for pingback comment type.
+	 */
+	public function test_verify_comment_pow_bypasses_for_pingback() {
+		global $current_user;
+		$current_user = null;
+
+		$_POST['cardea_nonce'] = '';
+
+		$commentdata = array(
+			'comment_post_ID' => 1,
+			'comment_type'    => 'pingback',
+		);
+		$result = $this->core->verify_comment_pow( $commentdata );
+
+		$this->assertEquals( $commentdata, $result );
+
+		$_POST = array();
+	}
+
+	/**
+	 * Test verify_comment_pow bypasses for trackback comment type.
+	 */
+	public function test_verify_comment_pow_bypasses_for_trackback() {
+		global $current_user;
+		$current_user = null;
+
+		$_POST['cardea_nonce'] = '';
+
+		$commentdata = array(
+			'comment_post_ID' => 1,
+			'comment_type'    => 'trackback',
+		);
+		$result = $this->core->verify_comment_pow( $commentdata );
+
+		$this->assertEquals( $commentdata, $result );
+
+		$_POST = array();
+	}
+
+	/**
+	 * Test verify_comment_pow bypasses for logged-in user.
+	 */
+	public function test_verify_comment_pow_bypasses_for_logged_in_user() {
+		global $current_user;
+		$current_user = new WP_User();
+
+		$_POST['cardea_nonce'] = '';
+
+		$commentdata = array(
+			'comment_post_ID' => 1,
+			'comment_type'     => 'comment',
+		);
+		$result = $this->core->verify_comment_pow( $commentdata );
+
+		$this->assertEquals( $commentdata, $result );
+
+		$_POST = array();
+		$current_user = null;
+	}
+
+	/**
+	 * Test verify_comment_pow validates for logged-out user with comment type 'comment'.
+	 */
+	public function test_verify_comment_pow_validates_for_logged_out_comment_type() {
+		global $current_user;
+		$current_user = null;
+
+		$_POST['cardea_nonce'] = '';
+		$_POST['cardea_timestamp'] = '1234567890';
+		$_POST['cardea_salt'] = 'testsalt';
+		$_POST['cardea_solution'] = '';
+		$_POST['cardea_signature'] = 'testsig';
+
+		$commentdata = array(
+			'comment_post_ID' => 1,
+			'comment_type'    => 'comment',
+		);
+
+		$this->expectException( Exception::class );
+		$this->expectExceptionMessage( 'Missing challenge fields.' );
+
+		$this->core->verify_comment_pow( $commentdata );
+
+		$_POST = array();
+	}
+
+	/**
+	 * Test verify_rest_comment bypasses for moderators.
+	 */
+	public function test_verify_rest_comment_bypasses_for_moderator() {
+		global $current_user;
+		$current_user = new WP_User();
+		$current_user->caps = array( 'moderate_comments' => true );
+
+		$request = $this->createMockWP_REST_Request();
+		$result = $this->core->verify_rest_comment( array(), $request );
+
+		$this->assertEquals( array(), $result );
+
+		$current_user = null;
+	}
+
+	/**
+	 * Test verify_rest_comment bypasses for pingbacks.
+	 */
+	public function test_verify_rest_comment_bypasses_for_pingback() {
+		global $current_user;
+		$current_user = null;
+
+		$request = $this->createMockWP_REST_Request( 'pingback' );
+		$result = $this->core->verify_rest_comment( array(), $request );
+
+		$this->assertEquals( array(), $result );
+	}
+
+	/**
+	 * Test verify_rest_comment bypasses for trackbacks.
+	 */
+	public function test_verify_rest_comment_bypasses_for_trackback() {
+		global $current_user;
+		$current_user = null;
+
+		$request = $this->createMockWP_REST_Request( 'trackback' );
+		$result = $this->core->verify_rest_comment( array(), $request );
+
+		$this->assertEquals( array(), $result );
+	}
+
+	/**
+	 * Test verify_rest_comment bypasses for logged-in users.
+	 */
+	public function test_verify_rest_comment_bypasses_for_logged_in_user() {
+		global $current_user;
+		$current_user = new WP_User();
+
+		$request = $this->createMockWP_REST_Request();
+		$result = $this->core->verify_rest_comment( array(), $request );
+
+		$this->assertEquals( array(), $result );
+
+		$current_user = null;
+	}
+
+	/**
+	 * Test verify_rest_comment blocks unauthenticated users.
+	 */
+	public function test_verify_rest_comment_blocks_unauthenticated() {
+		global $current_user;
+		$current_user = null;
+
+		$request = $this->createMockWP_REST_Request( 'comment' );
+		$result = $this->core->verify_rest_comment( array(), $request );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertEquals( 'cardea_missing_fields', $result->get_error_code() );
+	}
+
+	/**
+	 * Create a mock WP_REST_Request object.
+	 *
+	 * @param string $comment_type Optional comment type to configure.
+	 * @return object
+	 */
+	private function createMockWP_REST_Request( $comment_type = null ) {
+		return new class( $comment_type ) {
+			private $comment_type;
+
+			public function __construct( $comment_type = null ) {
+				$this->comment_type = $comment_type;
+			}
+
+			public function get_param( $param ) {
+				if ( $param === 'comment_type' ) {
+					return $this->comment_type;
+				}
+				return null;
+			}
+		};
+	}
+
+	/**
 	 * Find a valid solution for the given challenge (for testing).
 	 *
 	 * @param string $challenge  Challenge string.

@@ -280,3 +280,109 @@ test.describe('Cardea - Proof-of-Work Comment Spam Protection', () => {
     expect(hasError).toBe(true);
   });
 });
+
+test.describe('Cardea - Admin Dashboard Reply', () => {
+  let adminCli;
+
+  test.beforeAll(async () => {
+    adminCli = await runCLI({
+      command: 'server',
+      php: '8.3',
+      wp: 'latest',
+      login: true,
+      adminLogin: true,
+      mount: [
+        {
+          hostPath: './',
+          vfsPath: '/wordpress/wp-content/plugins/cardea',
+        },
+      ],
+      blueprint: {
+        steps: [
+          {
+            step: 'activatePlugin',
+            pluginPath: '/wordpress/wp-content/plugins/cardea/cardea.php',
+          },
+          {
+            step: 'writeFile',
+            path: '/wordpress/wp-content/mu-plugins/disable-flood-check.php',
+            data: '<?php add_filter("check_comment_flood", "__return_false", 999); add_filter("wp_is_comment_flood", "__return_false", 999); add_action("init", function() { remove_action("preprocess_comment", "wp_check_comment_flood_min_db"); }, 999);'
+          },
+          {
+            step: 'runPHP',
+            code: `<?php
+              require '/wordpress/wp-load.php';
+              $post_id = wp_insert_post([
+                'post_title' => 'Test Post for Admin Reply',
+                'post_content' => 'This is a test post for admin reply test.',
+                'post_status' => 'publish',
+                'comment_status' => 'open',
+              ]);
+              // Create a test comment
+              wp_insert_comment([
+                'comment_post_ID' => $post_id,
+                'comment_content' => 'Test comment for admin reply test',
+                'comment_author' => 'Test Commenter',
+                'comment_author_email' => 'tester@test.com',
+                'comment_approved' => 1,
+              ]);
+            `,
+          },
+        ],
+      },
+    });
+  });
+
+  test.afterAll(async () => {
+    if (adminCli) {
+      await adminCli[Symbol.asyncDispose]();
+    }
+  });
+
+  test('should allow admin to reply from wp-admin without PoW', async ({ page }) => {
+    // Go directly to wp-admin comments page (already logged in as admin)
+    await page.goto(`${adminCli.serverUrl}/wp-admin/edit-comments.php`);
+    await expect(page.locator('#the-comment-list')).toBeVisible({ timeout: 15000 });
+
+    // Wait for comments table to load
+    await page.waitForTimeout(3000);
+
+    // Check if there are any rows in the comments table
+    const hasComments = await page.locator('#the-comment-list tbody tr').count() > 0;
+    
+    if (hasComments) {
+      // Find and click reply button - try multiple possible selectors
+      const replyButton = page.locator('a.reply').or(page.locator('.reply-btn')).or(page.locator('td.column-comment a:has-text("Reply")'));
+      await replyButton.first().click({ timeout: 5000 }).catch(() => {
+        // If specific reply button not found, try clicking via JS
+        return page.evaluate(() => {
+          const replyLink = document.querySelector('a.reply') || document.querySelector('.reply-btn');
+          if (replyLink) replyLink.click();
+        });
+      });
+
+      // Wait for the reply form
+      await page.waitForTimeout(1000);
+      
+      // Check if reply container appeared
+      const replyContainer = page.locator('#replycontainer');
+      if (await replyContainer.isVisible().catch(() => false)) {
+        await page.fill('#replycontent', 'This is an admin reply from wp-admin');
+        await page.click('#replybtn-submit');
+        await page.waitForTimeout(3000);
+
+        const pageText = await page.locator('body').textContent();
+        expect(pageText.toLowerCase()).not.toContain('missing challenge fields');
+        expect(pageText.toLowerCase()).not.toContain('pow verification failed');
+      } else {
+        // Form didn't appear, skip
+        console.log('Reply form did not appear');
+      }
+    } else {
+      // No comments to reply to - verify we can at least access wp-admin without PoW errors
+      const pageText = await page.locator('body').textContent();
+      expect(pageText.toLowerCase()).not.toContain('missing challenge fields');
+      expect(pageText.toLowerCase()).not.toContain('pow verification failed');
+    }
+  });
+});

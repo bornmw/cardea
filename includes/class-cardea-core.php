@@ -202,6 +202,35 @@ class Cardea_Core {
 	 */
 	public function init() {
 		add_action( 'preprocess_comment', array( $this, 'verify_comment_pow' ) );
+		add_filter( 'rest_pre_insert_comment', array( $this, 'verify_rest_comment' ), 10, 2 );
+	}
+
+	/**
+	 * Verify PoW on REST API comment submission.
+	 *
+	 * @param array           $prepared_comment Prepared comment data.
+	 * @param WP_REST_Request $request          The request object.
+	 * @return array|WP_Error
+	 */
+	public function verify_rest_comment( $prepared_comment, $request ) {
+		if ( current_user_can( 'moderate_comments' ) ) {
+			return $prepared_comment;
+		}
+
+		$comment_type = $request->get_param( 'comment_type' ) ? $request->get_param( 'comment_type' ) : '';
+		if ( in_array( $comment_type, array( 'pingback', 'trackback' ), true ) ) {
+			return $prepared_comment;
+		}
+
+		if ( is_user_logged_in() ) {
+			return $prepared_comment;
+		}
+
+		return new WP_Error(
+			'cardea_missing_fields',
+			__( 'Missing challenge fields.', 'cardea' ),
+			array( 'status' => 403 )
+		);
 	}
 
 	/**
@@ -211,6 +240,19 @@ class Cardea_Core {
 	 * @return array|WP_Error
 	 */
 	public function verify_comment_pow( $commentdata ) {
+		if ( current_user_can( 'moderate_comments' ) ) {
+			return $commentdata;
+		}
+
+		$comment_type = isset( $commentdata['comment_type'] ) ? $commentdata['comment_type'] : '';
+		if ( in_array( $comment_type, array( 'pingback', 'trackback' ), true ) ) {
+			return $commentdata;
+		}
+
+		if ( is_user_logged_in() ) {
+			return $commentdata;
+		}
+
 		$nonce     = isset( $_POST['cardea_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_nonce'] ) ) : '';
 		$timestamp = isset( $_POST['cardea_timestamp'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_timestamp'] ) ) : '';
 		$salt      = isset( $_POST['cardea_salt'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_salt'] ) ) : '';
