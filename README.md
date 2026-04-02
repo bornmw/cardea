@@ -14,7 +14,7 @@ Unlike traditional anti-spam solutions that rely on heavy database lookups, CAPT
 
 This project utilizes a multi-tiered, containerized testing strategy to ensure reliability across environments without requiring local host dependencies:
 
-* **E2E Integration:** Playwright tests running against a WASM-based WordPress Playground.
+* **E2E Integration:** Playwright tests running against a WASM-based WordPress Playground (covering standard UI forms, REST API endpoints, Trackbacks, and XML-RPC vectors).
 * **JS Unit Testing:** Jest suite for Web Worker cryptographic verification.
 * **PHP Unit Testing:** PHPUnit for core HMAC signing and WordPress hook logic.
 * **Automated CI:** Continuous Integration via GitHub Actions validates every push.

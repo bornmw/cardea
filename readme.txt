@@ -33,6 +33,8 @@ Cardea is a lightweight WordPress plugin that protects your comment form from au
 * **Configurable Time Window** - Set how long challenges remain valid (5-120 minutes).
 * **Non-Intrusive** - Works transparently for legitimate users; spammers must complete the PoW challenge.
 * **WordPress Standards** - Follows WordPress coding standards and best practices.
+* **Privacy First (GDPR Friendly)** - No cookies, no user tracking, no CAPTCHA popups, and absolutely zero data sent to third-party cloud APIs.
+* **Smart Pathway Protection** - Flawlessly protects frontend forms and blocks XML-RPC botnets, while seamlessly allowing native Trackbacks and authenticated REST API requests.
 
 == Architecture & Testing ===
 
