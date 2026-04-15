@@ -77,8 +77,8 @@
 		const challengeString = buildChallengeString(challenge);
 		const difficulty = challenge.difficulty;
 
-		if (!worker && window.cardeaWorkerUrl) {
-			worker = new Worker(window.cardeaWorkerUrl);
+		if (!worker && cardeaConfig.workerUrl) {
+			worker = new Worker(cardeaConfig.workerUrl);
 		}
 
 		if (!worker) {
