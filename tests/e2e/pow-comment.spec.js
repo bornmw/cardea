@@ -378,4 +378,21 @@ test.describe('Cardea - Admin Dashboard Reply', () => {
       expect(pageText.toLowerCase()).not.toContain('pow verification failed');
     }
   });
+
+  test('should not load PoW fields for logged-in frontend users', async ({ page }) => {
+    // Logged-in user visits the frontend
+    await page.goto(`${adminCli.serverUrl}/?p=1`);
+    await expect(page.locator('#commentform')).toBeVisible();
+
+    // Verify PoW hidden fields are NOT in the DOM
+    const nonceCount = await page.locator('#cardea-nonce').count();
+    const solutionCount = await page.locator('#cardea-solution').count();
+
+    expect(nonceCount).toBe(0);
+    expect(solutionCount).toBe(0);
+
+    // Verify cardeaConfig is NOT localized
+    const hasConfig = await page.evaluate(() => typeof window.cardeaConfig !== 'undefined');
+    expect(hasConfig).toBe(false);
+  });
 });

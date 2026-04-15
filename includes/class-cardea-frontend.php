@@ -55,7 +55,6 @@ class Cardea_Frontend {
 	 */
 	public function init() {
 		add_action( 'comment_form_after_fields', array( $this, 'render_pow_fields' ) );
-		add_action( 'comment_form_logged_in_after', array( $this, 'render_pow_fields' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 	}
 
@@ -63,7 +62,7 @@ class Cardea_Frontend {
 	 * Enqueue frontend JavaScript and worker script.
 	 */
 	public function enqueue_scripts() {
-		if ( ! is_singular() || ! comments_open() ) {
+		if ( ! is_singular() || ! comments_open() || is_user_logged_in() ) {
 			return;
 		}
 
@@ -94,7 +93,7 @@ class Cardea_Frontend {
 	 * Render the PoW hidden fields in the comment form.
 	 */
 	public function render_pow_fields() {
-		if ( ! is_singular() || ! comments_open() ) {
+		if ( ! is_singular() || ! comments_open() || is_user_logged_in() ) {
 			return;
 		}
 		?>
