@@ -80,6 +80,8 @@ class Cardea_Frontend {
 			'cardeaConfig',
 			array(
 				'workerUrl' => CARDEA_PLUGIN_URL . 'assets/js/pow-worker.js',
+				'restUrl'   => esc_url_raw( rest_url( 'cardea/v1/challenge' ) ),
+				'postId'    => get_the_ID(),
 				'i18n'      => array(
 					'verifying' => __( 'Verifying...', 'cardea' ),
 					'solved'    => __( 'Solved!', 'cardea' ),
@@ -95,15 +97,12 @@ class Cardea_Frontend {
 		if ( ! is_singular() || ! comments_open() ) {
 			return;
 		}
-
-		$post_id   = get_the_ID();
-		$challenge = $this->core->generate_challenge( $post_id );
 		?>
-		<input type="hidden" name="cardea_nonce" id="cardea-nonce" value="<?php echo esc_attr( $challenge['nonce'] ); ?>" />
-		<input type="hidden" name="cardea_difficulty" id="cardea-difficulty" value="<?php echo esc_attr( $challenge['difficulty'] ); ?>" />
-		<input type="hidden" name="cardea_timestamp" id="cardea-timestamp" value="<?php echo esc_attr( $challenge['timestamp'] ); ?>" />
-		<input type="hidden" name="cardea_salt" id="cardea-salt" value="<?php echo esc_attr( $challenge['salt'] ); ?>" />
-		<input type="hidden" name="cardea_signature" id="cardea-signature" value="<?php echo esc_attr( $challenge['signature'] ); ?>" />
+		<input type="hidden" name="cardea_nonce" id="cardea-nonce" value="" />
+		<input type="hidden" name="cardea_difficulty" id="cardea-difficulty" value="" />
+		<input type="hidden" name="cardea_timestamp" id="cardea-timestamp" value="" />
+		<input type="hidden" name="cardea_salt" id="cardea-salt" value="" />
+		<input type="hidden" name="cardea_signature" id="cardea-signature" value="" />
 		<input type="hidden" name="cardea_solution" id="cardea-solution" value="" />
 		<?php
 	}

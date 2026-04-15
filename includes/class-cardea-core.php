@@ -203,6 +203,33 @@ class Cardea_Core {
 	public function init() {
 		add_action( 'preprocess_comment', array( $this, 'verify_comment_pow' ) );
 		add_filter( 'rest_pre_insert_comment', array( $this, 'verify_rest_comment' ), 10, 2 );
+		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+	}
+
+	/**
+	 * Register REST API route for fetching challenges.
+	 */
+	public function register_rest_routes() {
+		register_rest_route(
+			'cardea/v1',
+			'/challenge',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'rest_get_challenge' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+
+	/**
+	 * REST API callback to generate a fresh challenge.
+	 *
+	 * @param object $request The request object.
+	 * @return array
+	 */
+	public function rest_get_challenge( $request ) {
+		$post_id = $request->get_param( 'post_id' ) ? (int) $request->get_param( 'post_id' ) : 0;
+		return $this->generate_challenge( $post_id );
 	}
 
 	/**

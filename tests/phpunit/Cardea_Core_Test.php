@@ -460,23 +460,55 @@ class Cardea_Core_Test extends PHPUnit\Framework\TestCase {
 	 * Create a mock WP_REST_Request object.
 	 *
 	 * @param string $comment_type Optional comment type to configure.
+	 * @param int    $post_id      Optional post ID to configure.
 	 * @return object
 	 */
-	private function createMockWP_REST_Request( $comment_type = null ) {
-		return new class( $comment_type ) {
+	private function createMockWP_REST_Request( $comment_type = null, $post_id = null ) {
+		return new class( $comment_type, $post_id ) {
 			private $comment_type;
+			private $post_id;
 
-			public function __construct( $comment_type = null ) {
+			public function __construct( $comment_type = null, $post_id = null ) {
 				$this->comment_type = $comment_type;
+				$this->post_id = $post_id;
 			}
 
 			public function get_param( $param ) {
 				if ( $param === 'comment_type' ) {
 					return $this->comment_type;
 				}
+				if ( $param === 'post_id' ) {
+					return $this->post_id;
+				}
 				return null;
 			}
 		};
+	}
+
+	/**
+	 * Test rest_get_challenge returns valid challenge data.
+	 */
+	public function test_rest_get_challenge() {
+		$request = $this->createMockWP_REST_Request( null, 1 );
+		$result = $this->core->rest_get_challenge( $request );
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'nonce', $result );
+		$this->assertArrayHasKey( 'timestamp', $result );
+		$this->assertArrayHasKey( 'salt', $result );
+		$this->assertArrayHasKey( 'signature', $result );
+		$this->assertArrayHasKey( 'difficulty', $result );
+	}
+
+	/**
+	 * Test rest_get_challenge works without post_id.
+	 */
+	public function test_rest_get_challenge_without_post_id() {
+		$request = $this->createMockWP_REST_Request();
+		$result = $this->core->rest_get_challenge( $request );
+
+		$this->assertIsArray( $result );
+		$this->assertArrayHasKey( 'nonce', $result );
 	}
 
 	/**
