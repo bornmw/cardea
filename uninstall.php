@@ -18,14 +18,11 @@ delete_option( 'cardea_time_window' );
 // Transients are stored in the wp_options table with specific prefixes.
 global $wpdb;
 
-// Replace 'cardea_used_' with whatever prefix you actually used in set_transient().
-$transient_prefix = 'cardea_used_';
-
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 $wpdb->query(
 	$wpdb->prepare(
 		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-		'_transient_' . $transient_prefix . '%',
-		'_transient_timeout_' . $transient_prefix . '%'
+		'_transient_cardea_used_%',
+		'_transient_timeout_cardea_used_%'
 	)
 );
