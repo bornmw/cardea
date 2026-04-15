@@ -43,13 +43,4 @@ function cardea_init() {
 	$frontend->init();
 	$admin->init();
 }
-
-/**
- * Load plugin textdomain.
- */
-function cardea_init_textdomain() {
-	load_plugin_textdomain( 'cardea', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-}
-
-add_action( 'init', 'cardea_init_textdomain' );
 add_action( 'plugins_loaded', 'cardea_init' );
