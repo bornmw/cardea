@@ -35,6 +35,8 @@ Cardea is a lightweight WordPress plugin that protects your comment form from au
 * **WordPress Standards** - Follows WordPress coding standards and best practices.
 * **Privacy First (GDPR Friendly)** - No cookies, no user tracking, no CAPTCHA popups, and absolutely zero data sent to third-party cloud APIs.
 * **Smart Pathway Protection** - Flawlessly protects frontend forms and blocks XML-RPC botnets, while seamlessly allowing native Trackbacks and authenticated REST API requests.
+* **Page Caching Compatible** - Uses dynamic REST API endpoint to fetch fresh challenges, ensuring compatibility with edge caching (Cloudflare, Varnish) and full-page caching plugins.
+* **Logged-In User Bypass** - Skips PoW challenge for authenticated users, eliminating unnecessary CPU usage on the frontend.
 
 == Architecture & Testing ===
 
@@ -43,7 +45,8 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 **Frontend Architecture:**
 * Zero-dependency JavaScript using native Web Crypto APIs (crypto.subtle)
 * Web Workers for background cryptographic mining (non-blocking UI)
-* Stateless HMAC-SHA256 signatures for challenge generation (no database on page load)
+* Dynamic challenge fetching via REST API (compatible with page caching)
+* Skip PoW for logged-in users (zero CPU overhead for authenticated commenters)
 
 **Backend Architecture:**
 * Localized replay protection using WordPress transients
