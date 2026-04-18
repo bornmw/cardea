@@ -74,6 +74,45 @@ package:
 	@echo "Package created at dist/$(PLUGIN_SLUG).zip"
 
 # ==========================================
+# SVN DEPLOYMENT
+# ==========================================
+# Define SVN_DIR. Can be overridden via command line.
+SVN_DIR ?= ../cardea-svn
+
+sync-svn:
+	@echo "Syncing $(PLUGIN_SLUG) version $(VERSION) to SVN..."
+	@if [ ! -d "$(SVN_DIR)" ]; then echo "Error: SVN directory $(SVN_DIR) does not exist."; exit 1; fi
+
+	@echo "--> Mirroring production files to $(SVN_DIR)/trunk/"
+	@rsync -av --delete \
+		--exclude=".*" \
+		--exclude="*.git*" \
+		--exclude="node_modules/" \
+		--exclude="vendor/" \
+		--exclude="tests/" \
+		--exclude="dist/" \
+		--exclude=".github/" \
+		--exclude=".playwright-browsers/" \
+		--exclude="playwright-report/" \
+		--exclude="test-results/" \
+		--exclude=".phpunit.result.cache" \
+		--exclude="phpunit.xml" \
+		--exclude="playwright.config.js" \
+		--exclude="composer.*" \
+		--exclude="package*.json" \
+		--exclude="Dockerfile" \
+		--exclude=".dockerignore" \
+		--exclude="Makefile" \
+		--exclude="README.md" \
+		--exclude="assets/" \
+		./ $(SVN_DIR)/trunk/
+
+	@echo "--> Mirroring repository assets to $(SVN_DIR)/assets/"
+	@rsync -av --delete ./assets/ $(SVN_DIR)/assets/
+
+	@echo "Sync complete. Run 'svn status' in $(SVN_DIR) to review changes."
+
+# ==========================================
 # CLEANUP
 # ==========================================
 clean:
