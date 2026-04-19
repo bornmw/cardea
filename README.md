@@ -1,7 +1,5 @@
 # Cardea - Proof-of-Work Comment Spam Protection
 
-== Description ==
-
 Are you tired of anti-spam plugins that bloat your site, inject third-party tracking, or constantly upsell you on premium SaaS subscriptions? Are you looking for a straightforward, lightweight solution that just protects your comments without the extra baggage?
 
 Then Cardea is the right tool for you.
