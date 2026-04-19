@@ -70,7 +70,9 @@ package:
 		-x "Dockerfile" \
 		-x ".dockerignore" \
 		-x "Makefile" \
-		-x "README.md"
+		-x "README.md" \
+		-x "wp-assets/*" \
+		-x "design/*"
 	@echo "Package created at dist/$(PLUGIN_SLUG).zip"
 
 # ==========================================
@@ -104,11 +106,12 @@ sync-svn:
 		--exclude=".dockerignore" \
 		--exclude="Makefile" \
 		--exclude="README.md" \
-		--exclude="assets/" \
+		--exclude="wp-assets/" \
+		--exclude="design/" \
 		./ $(SVN_DIR)/trunk/
 
 	@echo "--> Mirroring repository assets to $(SVN_DIR)/assets/"
-	@rsync -av --delete ./assets/ $(SVN_DIR)/assets/
+	@rsync -av --delete ./wp-assets/ $(SVN_DIR)/assets/
 
 	@echo "Sync complete. Run 'svn status' in $(SVN_DIR) to review changes."
 
