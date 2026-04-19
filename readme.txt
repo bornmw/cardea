@@ -32,7 +32,7 @@ Cardea offers distinct advantages for site owners who value simplicity, privacy,
 
 5. **Plug-and-Play Simplicity** - No complex routing rules. No integration toggles. No configuration mazes. Users simply activate Cardea and their discussion threads are protected immediately.
 
-To view the source code, contribute, or report issues, visit the [Cardea GitHub Repository](https://github.com/omikheev/cardea).
+To view the source code, contribute, or report issues, visit the [Cardea GitHub Repository](https://github.com/bornmw/cardea).
 
 === How It Works ===
 
