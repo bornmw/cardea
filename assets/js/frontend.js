@@ -110,7 +110,7 @@
 		const challengeString = buildChallengeString(challenge);
 		const difficulty = challenge.difficulty;
 
-		if (!worker && cardeaConfig.workerUrl) {
+		if (!worker && cardeaConfig.workerUrl && typeof Worker === 'function') {
 			worker = new Worker(cardeaConfig.workerUrl);
 		}
 

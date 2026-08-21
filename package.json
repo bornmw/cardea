@@ -1,6 +1,6 @@
 {
     "name": "cardea",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Lightweight, zero-dependency Proof-of-Work anti-spam protection for WordPress comments",
     "main": "assets/js/frontend.js",
     "scripts": {

@@ -3,8 +3,8 @@ Contributors: omikheev
 Tags: comments, spam, protection, proof-of-work, anti-spam
 Requires at least: 6.0
 Requires PHP: 7.4
-Tested up to: 6.9
-Stable tag: 1.0.0
+Tested up to: 7.1
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -144,6 +144,9 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 
 == Changelog ==
 
+= 1.0.1 =
+* Verified compatibility with WordPress 7.1
+
 = 1.0.0 =
 * Initial release
 * HMAC-signed challenge generation (zero DB writes on page load)
@@ -153,6 +156,9 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 * Self-cleaning replay protection via WordPress transients
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Verified compatibility with the latest WordPress 7.1.
 
 = 1.0.0 =
 Initial release of the Cardea - Proof-of-Work Comment Spam Protection plugin.

@@ -24,7 +24,7 @@
 define( 'ABSPATH', '/var/www/html/' );
 define( 'CARDEA_PLUGIN_DIR', __DIR__ . '/../../' );
 define( 'CARDEA_PLUGIN_URL', 'https://example.com/wp-content/plugins/cardea/' );
-define( 'CARDEA_VERSION', '1.0.0' );
+define( 'CARDEA_VERSION', '1.0.1' );
 define( 'CARDEA_DEFAULT_DIFFICULTY', 4 );
 define( 'CARDEA_DEFAULT_WINDOW', 30 );
 

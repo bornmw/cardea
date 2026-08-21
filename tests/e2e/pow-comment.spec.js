@@ -265,12 +265,12 @@ test('should reject tampered signature', async ({ page }) => {
     await page.click('#submit', { noWaitAfter: true });
     await page.waitForTimeout(3000);
 
-    // Without Worker, submission should work (graceful fallback)
-    const pageText = await page.locator('body').textContent();
-    const hasError = pageText.toLowerCase().includes('missing') || 
-                     pageText.toLowerCase().includes('solution') ||
-                     pageText.toLowerCase().includes('failed');
-    expect(hasError).toBe(false);
+    // Without Worker support the form must stay intact: no JavaScript crash
+    // and no server error page (the challenge simply cannot be solved).
+    // Note: do not grep body textContent for error words - it contains
+    // WordPress core script sources (e.g. wp-emoji loader).
+    await expect(page.locator('#commentform')).toBeVisible();
+    await expect(page.locator('.wp-die-message')).not.toBeVisible();
   });
 });
 
