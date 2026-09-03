@@ -4,7 +4,7 @@ Tags: comments, spam, protection, proof-of-work, anti-spam
 Requires at least: 6.0
 Requires PHP: 7.4
 Tested up to: 7.1
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -145,6 +145,16 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 
 == Changelog ==
 
+= 1.0.2 =
+* Security: REST comment submissions now go through the same PoW verification as the comment form.
+* Security: unified, generic verification failure messages (per-cause codes no longer revealed to clients).
+* Security: configured difficulty is applied at verification time.
+* Performance: replay protection is a single capped (1024), self-pruning `cardea_used` option instead of two transient rows per comment.
+* Performance: synchronous in-worker SHA-256 mining - no `crypto.subtle` dependency (works on non-secure/HTTP contexts) and no counter cap; server verification wire format unchanged.
+* Compatibility: WordPress 7.1 removed `set_option()`; plugin writes now use `update_option()`.
+* Architecture: new `Cardea_Comment_Gate` class (pure PoW core), single source of truth for the version in tests, unified packaging exclusions, shared e2e fixture.
+* Docs: accurate XML-RPC/REST behavior notes, difficulty solve-time guidance.
+
 = 1.0.1 =
 * Verified compatibility with WordPress 7.1
 
@@ -154,9 +164,12 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 * Web Worker-based client-side mining
 * Admin settings page
 * Configurable difficulty and time window
-* Self-cleaning replay protection via a capped, self-pruning store
+* Self-cleaning replay protection via WordPress transients
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+Security and performance improvements: REST PoW verification parity, bounded self-pruning replay store, synchronous in-worker SHA-256 miner (works over plain HTTP too), WordPress 7.1 `set_option()` compatibility.
 
 = 1.0.1 =
 Verified compatibility with the latest WordPress 7.1.
