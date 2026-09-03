@@ -54,8 +54,8 @@ EXCLUDE_DIRS  := node_modules vendor tests dist .github .playwright-browsers pla
 EXCLUDE_FILES := .phpunit.result.cache phpunit.xml playwright.config.js Dockerfile .dockerignore Makefile README.md
 EXCLUDE_GLOBS := *.git* composer.* package*.json
 
-ZIP_EXCLUDES := $(foreach entry,$(EXCLUDE_DIRS),\"$(entry)/*\") $(foreach entry,$(EXCLUDE_FILES),\"$(entry)\") $(foreach entry,$(EXCLUDE_GLOBS),\"$(entry)\")
-RSYNC_EXCLUDES := $(foreach entry,$(EXCLUDE_DIRS),--exclude=$(entry)/) $(foreach entry,$(EXCLUDE_FILES),--exclude=$(entry)) $(foreach entry,$(EXCLUDE_GLOBS),--exclude=$(entry))
+ZIP_EXCLUDES := $(foreach entry,$(EXCLUDE_DIRS),"$(entry)/*") $(foreach entry,$(EXCLUDE_FILES),"$(entry)") $(foreach entry,$(EXCLUDE_GLOBS),"$(entry)")
+RSYNC_EXCLUDES := $(foreach entry,$(EXCLUDE_DIRS),"--exclude=$(entry)/") $(foreach entry,$(EXCLUDE_FILES),"--exclude=$(entry)") $(foreach entry,$(EXCLUDE_GLOBS),"--exclude=$(entry)")
 
 package:
 	@echo "Packaging $(PLUGIN_SLUG) version $(VERSION)..."
