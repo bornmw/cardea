@@ -12,11 +12,6 @@
         "phpcompatibility/php-compatibility": "^9.3",
         "wp-coding-standards/wpcs": "^3.0"
     },
-    "autoload": {
-        "psr-4": {
-            "Cardea\\": "includes/"
-        }
-    },
     "scripts": {
         "test": "phpunit",
         "phpcs": "phpcs --standard=WordPress --ignore=vendor/,node_modules/,tests/ --extensions=php .",

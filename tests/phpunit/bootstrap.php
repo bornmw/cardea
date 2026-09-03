@@ -24,13 +24,24 @@
 define( 'ABSPATH', '/var/www/html/' );
 define( 'CARDEA_PLUGIN_DIR', __DIR__ . '/../../' );
 define( 'CARDEA_PLUGIN_URL', 'https://example.com/wp-content/plugins/cardea/' );
-define( 'CARDEA_VERSION', '1.0.1' );
 define( 'CARDEA_DEFAULT_DIFFICULTY', 4 );
 define( 'CARDEA_DEFAULT_WINDOW', 30 );
+
+/*
+ * Single source of truth: the plugin version is parsed from the cardea.php
+ * header instead of being re-typed here.
+ */
+$cardea_header = file_get_contents( CARDEA_PLUGIN_DIR . 'cardea.php' );
+if ( preg_match( '/^\s*\*\s*Version:\s*(\S+)/m', $cardea_header, $cardea_matches ) ) {
+	define( 'CARDEA_VERSION', $cardea_matches[1] );
+} else {
+	define( 'CARDEA_VERSION', '0.0.0' );
+}
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 require_once CARDEA_PLUGIN_DIR . 'includes/class-cardea-core.php';
+require_once CARDEA_PLUGIN_DIR . 'includes/class-cardea-comment-gate.php';
 
 function get_option( $option, $default = false ) {
 	global $wp_options;

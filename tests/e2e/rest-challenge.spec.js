@@ -21,48 +21,12 @@
  */
 
 const { test, expect } = require('@playwright/test');
-const { runCLI } = require('@wp-playground/cli');
+const { startPlayground } = require('./support/playground');
 
 let cli;
 
 test.beforeAll(async () => {
-  cli = await runCLI({
-    command: 'server',
-    php: '8.3',
-    wp: 'latest',
-    login: false,
-    mount: [
-      {
-        hostPath: './',
-        vfsPath: '/wordpress/wp-content/plugins/cardea',
-      },
-    ],
-    blueprint: {
-      steps: [
-        {
-          step: 'activatePlugin',
-          pluginPath: '/wordpress/wp-content/plugins/cardea/cardea.php',
-        },
-        {
-          step: 'writeFile',
-          path: '/wordpress/wp-content/mu-plugins/disable-flood-check.php',
-          data: '<?php add_filter("check_comment_flood", "__return_false", 999); add_filter("wp_is_comment_flood", "__return_false", 999);'
-        },
-        {
-          step: 'runPHP',
-          code: `<?php
-            require '/wordpress/wp-load.php';
-            wp_insert_post([
-              'post_title' => 'Test Post for REST Challenge',
-              'post_content' => 'This is a test post.',
-              'post_status' => 'publish',
-              'comment_status' => 'open',
-            ]);
-          `,
-        },
-      ],
-    },
-  });
+    cli = await startPlayground( { postTitle: 'Test Post for REST Challenge' });
 });
 
 test.afterAll(async () => {

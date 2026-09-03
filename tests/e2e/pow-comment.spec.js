@@ -22,48 +22,12 @@
  */
 
 const { test, expect } = require('@playwright/test');
-const { runCLI } = require('@wp-playground/cli');
+const { startPlayground } = require('./support/playground');
 
 let cli;
 
 test.beforeAll(async () => {
-  cli = await runCLI({
-    command: 'server',
-    php: '8.3',
-    wp: 'latest',
-    login: false,
-    mount: [
-      {
-        hostPath: './',
-        vfsPath: '/wordpress/wp-content/plugins/cardea',
-      },
-    ],
-    blueprint: {
-      steps: [
-        {
-          step: 'activatePlugin',
-          pluginPath: '/wordpress/wp-content/plugins/cardea/cardea.php',
-        },
-        {
-          step: 'writeFile',
-          path: '/wordpress/wp-content/mu-plugins/disable-flood-check.php',
-          data: '<?php add_filter("check_comment_flood", "__return_false", 999); add_filter("wp_is_comment_flood", "__return_false", 999); add_action("init", function() { remove_action("preprocess_comment", "wp_check_comment_flood_min_db"); }, 999);'
-        },
-        {
-          step: 'runPHP',
-          code: `<?php
-            require '/wordpress/wp-load.php';
-            $post_id = wp_insert_post([
-              'post_title' => 'Test Post for Comments',
-              'post_content' => 'This is a test post to verify comment form.',
-              'post_status' => 'publish',
-              'comment_status' => 'open',
-            ]);
-          `,
-        },
-      ],
-    },
-  });
+    cli = await startPlayground( { postTitle: 'Test Post for Comments' });
 });
 
 test.afterAll(async () => {
@@ -131,7 +95,7 @@ test.describe('Cardea - Proof-of-Work Comment Spam Protection', () => {
       HTMLFormElement.prototype.submit.call(clone);
     });
 
-    await expect(page.locator('.wp-die-message')).toContainText('Missing', { ignoreCase: true });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true });
   });
 
 test('should reject tampered signature', async ({ page }) => {
@@ -157,7 +121,7 @@ test('should reject tampered signature', async ({ page }) => {
       HTMLFormElement.prototype.submit.call(clone);
     });
 
-    await expect(page.locator('.wp-die-message')).toContainText('signature', { ignoreCase: true });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true });
   });
 
   test('should reject tampered timestamp', async ({ page }) => {
@@ -183,7 +147,7 @@ test('should reject tampered signature', async ({ page }) => {
       HTMLFormElement.prototype.submit.call(clone);
     });
 
-    await expect(page.locator('.wp-die-message')).toContainText(/signature|expired/i, { timeout: 10000 });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true, timeout: 10000 });
   });
 
   test('should reject replay attacks (same valid payload submitted twice)', async ({ page }) => {
@@ -247,7 +211,7 @@ test('should reject tampered signature', async ({ page }) => {
       HTMLFormElement.prototype.submit.call(clone);
     }, payload);
 
-    await expect(page.locator('.wp-die-message')).toContainText('already been used', { ignoreCase: true });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true });
   });
 
   test('should work without Web Worker support', async ({ page }) => {
@@ -278,53 +242,15 @@ test.describe('Cardea - Admin Dashboard Reply', () => {
   let adminCli;
 
   test.beforeAll(async () => {
-    adminCli = await runCLI({
-      command: 'server',
-      php: '8.3',
-      wp: 'latest',
-      login: true,
-      adminLogin: true,
-      mount: [
-        {
-          hostPath: './',
-          vfsPath: '/wordpress/wp-content/plugins/cardea',
-        },
-      ],
-      blueprint: {
-        steps: [
-          {
-            step: 'activatePlugin',
-            pluginPath: '/wordpress/wp-content/plugins/cardea/cardea.php',
-          },
-          {
-            step: 'writeFile',
-            path: '/wordpress/wp-content/mu-plugins/disable-flood-check.php',
-            data: '<?php add_filter("check_comment_flood", "__return_false", 999); add_filter("wp_is_comment_flood", "__return_false", 999); add_action("init", function() { remove_action("preprocess_comment", "wp_check_comment_flood_min_db"); }, 999);'
-          },
-          {
-            step: 'runPHP',
-            code: `<?php
-              require '/wordpress/wp-load.php';
-              $post_id = wp_insert_post([
-                'post_title' => 'Test Post for Admin Reply',
-                'post_content' => 'This is a test post for admin reply test.',
-                'post_status' => 'publish',
-                'comment_status' => 'open',
-              ]);
-              // Create a test comment
-              wp_insert_comment([
-                'comment_post_ID' => $post_id,
-                'comment_content' => 'Test comment for admin reply test',
-                'comment_author' => 'Test Commenter',
-                'comment_author_email' => 'tester@test.com',
-                'comment_approved' => 1,
-              ]);
-            `,
-          },
-        ],
-      },
-    });
-  });
+      adminCli = await startPlayground( { login: true, postTitle: 'Test Post for Admin Reply', extraRunPHP: `            wp_insert_comment([
+              'comment_post_ID' => $post_id,
+              'comment_content' => 'Test comment for admin reply test',
+              'comment_author' => 'Test Commenter',
+              'comment_author_email' => 'tester@test.com',
+              'comment_approved' => 1,
+            ]);` });
+});
+
 
   test.afterAll(async () => {
     if (adminCli) {
@@ -365,7 +291,7 @@ test.describe('Cardea - Admin Dashboard Reply', () => {
         await page.waitForTimeout(3000);
 
         const pageText = await page.locator('body').textContent();
-        expect(pageText.toLowerCase()).not.toContain('missing challenge fields');
+        expect(pageText.toLowerCase()).not.toContain('could not be verified');
         expect(pageText.toLowerCase()).not.toContain('pow verification failed');
       } else {
         // Form didn't appear, skip
@@ -374,7 +300,7 @@ test.describe('Cardea - Admin Dashboard Reply', () => {
     } else {
       // No comments to reply to - verify we can at least access wp-admin without PoW errors
       const pageText = await page.locator('body').textContent();
-      expect(pageText.toLowerCase()).not.toContain('missing challenge fields');
+      expect(pageText.toLowerCase()).not.toContain('could not be verified');
       expect(pageText.toLowerCase()).not.toContain('pow verification failed');
     }
   });
