@@ -207,368 +207,6 @@ class Cardea_Core_Test extends PHPUnit\Framework\TestCase {
 	}
 
 	/**
-	 * Test verify_comment_pow triggers wp_die for missing fields.
-	 */
-	public function test_verify_comment_pow_missing_fields() {
-		$_POST['cardea_nonce'] = '';
-		$_POST['cardea_timestamp'] = '1234567890';
-		$_POST['cardea_salt'] = 'testsalt';
-		$_POST['cardea_solution'] = '';
-		$_POST['cardea_signature'] = 'testsig';
-
-		$this->expectException( Exception::class );
-		$this->expectExceptionMessage( Cardea_Core::failure_message() );
-
-		$this->core->verify_comment_pow( array() );
-	}
-
-	/**
-	 * Test verify_comment_pow triggers wp_die for invalid nonce.
-	 */
-	public function test_verify_comment_pow_invalid_nonce() {
-		$_POST['cardea_nonce'] = 'invalid_nonce';
-		$_POST['cardea_timestamp'] = (string) time();
-		$_POST['cardea_salt'] = 'testsalt';
-		$_POST['cardea_solution'] = '12345';
-		$_POST['cardea_signature'] = 'testsig';
-
-		$this->expectException( Exception::class );
-		$this->expectExceptionMessage( Cardea_Core::failure_message() );
-
-		$this->core->verify_comment_pow( array() );
-	}
-
-	/**
-	 * Test verify_comment_pow triggers wp_die for invalid solution.
-	 */
-	public function test_verify_comment_pow_invalid_solution() {
-		$challenge = $this->core->generate_challenge( 1 );
-
-		$_POST['cardea_nonce'] = $challenge['nonce'];
-		$_POST['cardea_timestamp'] = (string) $challenge['timestamp'];
-		$_POST['cardea_salt'] = $challenge['salt'];
-		$_POST['cardea_solution'] = 'invalid';
-		$_POST['cardea_signature'] = $challenge['signature'];
-
-		$this->expectException( Exception::class );
-		$this->expectExceptionMessage( Cardea_Core::failure_message() );
-
-		$this->core->verify_comment_pow( array() );
-	}
-
-	/**
-	 * Test verify_comment_pow accepts valid submission.
-	 */
-	public function test_verify_comment_pow_success() {
-		$challenge = $this->core->generate_challenge( 1 );
-		$challenge_string = $this->core->build_challenge_string( $challenge );
-		$solution = $this->find_solution( $challenge_string, $challenge['difficulty'] );
-
-		$_POST['cardea_nonce'] = $challenge['nonce'];
-		$_POST['cardea_timestamp'] = (string) $challenge['timestamp'];
-		$_POST['cardea_salt'] = $challenge['salt'];
-		$_POST['cardea_solution'] = $solution;
-		$_POST['cardea_signature'] = $challenge['signature'];
-
-		$commentdata = array( 'comment_post_ID' => 1 );
-		$result = $this->core->verify_comment_pow( $commentdata );
-
-		$this->assertEquals( $commentdata, $result );
-
-		// Clean up
-		$_POST = array();
-	}
-
-	/**
-	 * Test verify_comment_pow bypasses for users with moderate_comments capability.
-	 */
-	public function test_verify_comment_pow_bypasses_for_moderator() {
-		global $current_user;
-		$current_user = new WP_User();
-		$current_user->caps = array( 'moderate_comments' => true );
-
-		$_POST['cardea_nonce'] = '';
-
-		$commentdata = array( 'comment_post_ID' => 1 );
-		$result = $this->core->verify_comment_pow( $commentdata );
-
-		$this->assertEquals( $commentdata, $result );
-
-		$_POST = array();
-		$current_user = null;
-	}
-
-	/**
-	 * Test verify_comment_pow bypasses for pingback comment type.
-	 */
-	public function test_verify_comment_pow_bypasses_for_pingback() {
-		global $current_user;
-		$current_user = null;
-
-		$_POST['cardea_nonce'] = '';
-
-		$commentdata = array(
-			'comment_post_ID' => 1,
-			'comment_type'    => 'pingback',
-		);
-		$result = $this->core->verify_comment_pow( $commentdata );
-
-		$this->assertEquals( $commentdata, $result );
-
-		$_POST = array();
-	}
-
-	/**
-	 * Test verify_comment_pow bypasses for trackback comment type.
-	 */
-	public function test_verify_comment_pow_bypasses_for_trackback() {
-		global $current_user;
-		$current_user = null;
-
-		$_POST['cardea_nonce'] = '';
-
-		$commentdata = array(
-			'comment_post_ID' => 1,
-			'comment_type'    => 'trackback',
-		);
-		$result = $this->core->verify_comment_pow( $commentdata );
-
-		$this->assertEquals( $commentdata, $result );
-
-		$_POST = array();
-	}
-
-	/**
-	 * Test verify_comment_pow bypasses for logged-in user.
-	 */
-	public function test_verify_comment_pow_bypasses_for_logged_in_user() {
-		global $current_user;
-		$current_user = new WP_User();
-
-		$_POST['cardea_nonce'] = '';
-
-		$commentdata = array(
-			'comment_post_ID' => 1,
-			'comment_type'     => 'comment',
-		);
-		$result = $this->core->verify_comment_pow( $commentdata );
-
-		$this->assertEquals( $commentdata, $result );
-
-		$_POST = array();
-		$current_user = null;
-	}
-
-	/**
-	 * Test verify_comment_pow validates for logged-out user with comment type 'comment'.
-	 */
-	public function test_verify_comment_pow_validates_for_logged_out_comment_type() {
-		global $current_user;
-		$current_user = null;
-
-		$_POST['cardea_nonce'] = '';
-		$_POST['cardea_timestamp'] = '1234567890';
-		$_POST['cardea_salt'] = 'testsalt';
-		$_POST['cardea_solution'] = '';
-		$_POST['cardea_signature'] = 'testsig';
-
-		$commentdata = array(
-			'comment_post_ID' => 1,
-			'comment_type'    => 'comment',
-		);
-
-		$this->expectException( Exception::class );
-		$this->expectExceptionMessage( Cardea_Core::failure_message() );
-
-		$this->core->verify_comment_pow( $commentdata );
-
-		$_POST = array();
-	}
-
-	/**
-	 * Test verify_rest_comment bypasses for moderators.
-	 */
-	public function test_verify_rest_comment_bypasses_for_moderator() {
-		global $current_user;
-		$current_user = new WP_User();
-		$current_user->caps = array( 'moderate_comments' => true );
-
-		$request = $this->createMockWP_REST_Request();
-		$result = $this->core->verify_rest_comment( array(), $request );
-
-		$this->assertEquals( array(), $result );
-
-		$current_user = null;
-	}
-
-	/**
-	 * Test verify_rest_comment bypasses for pingbacks.
-	 */
-	public function test_verify_rest_comment_bypasses_for_pingback() {
-		global $current_user;
-		$current_user = null;
-
-		$request = $this->createMockWP_REST_Request( 'pingback' );
-		$result = $this->core->verify_rest_comment( array(), $request );
-
-		$this->assertEquals( array(), $result );
-	}
-
-	/**
-	 * Test verify_rest_comment bypasses for trackbacks.
-	 */
-	public function test_verify_rest_comment_bypasses_for_trackback() {
-		global $current_user;
-		$current_user = null;
-
-		$request = $this->createMockWP_REST_Request( 'trackback' );
-		$result = $this->core->verify_rest_comment( array(), $request );
-
-		$this->assertEquals( array(), $result );
-	}
-
-	/**
-	 * Test verify_rest_comment bypasses for logged-in users.
-	 */
-	public function test_verify_rest_comment_bypasses_for_logged_in_user() {
-		global $current_user;
-		$current_user = new WP_User();
-
-		$request = $this->createMockWP_REST_Request();
-		$result = $this->core->verify_rest_comment( array(), $request );
-
-		$this->assertEquals( array(), $result );
-
-		$current_user = null;
-	}
-
-	/**
-	 * Test verify_rest_comment blocks anonymous users without challenge fields.
-	 */
-	public function test_verify_rest_comment_blocks_unauthenticated() {
-		global $current_user;
-		$current_user = null;
-
-		$request = $this->createMockWP_REST_Request( 'comment' );
-		$result = $this->core->verify_rest_comment( array(), $request );
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'cardea_missing_fields', $result->get_error_code() );
-	}
-
-	/**
-	 * Test verify_rest_comment accepts anonymous submissions with a valid PoW solution.
-	 */
-	public function test_verify_rest_comment_accepts_valid_solution() {
-		global $current_user;
-		$current_user = null;
-
-		$challenge = $this->core->generate_challenge( 1 );
-		$solution  = $this->find_solution( $this->core->build_challenge_string( $challenge ), $challenge['difficulty'] );
-
-		$request = $this->createMockWP_REST_Request(
-			'comment',
-			1,
-			array(
-				'cardea_nonce'      => $challenge['nonce'],
-				'cardea_timestamp'  => (string) $challenge['timestamp'],
-				'cardea_salt'       => $challenge['salt'],
-				'cardea_solution'   => $solution,
-				'cardea_signature'  => $challenge['signature'],
-			)
-		);
-
-		$prepared = array( 'post_id' => 1 );
-		$result   = $this->core->verify_rest_comment( $prepared, $request );
-
-		$this->assertEquals( $prepared, $result );
-	}
-
-	/**
-	 * Test verify_rest_comment rejects anonymous submissions with an invalid solution.
-	 */
-	public function test_verify_rest_comment_rejects_invalid_solution() {
-		global $current_user;
-		$current_user = null;
-
-		$challenge = $this->core->generate_challenge( 1 );
-
-		$request = $this->createMockWP_REST_Request(
-			'comment',
-			1,
-			array(
-				'cardea_nonce'     => $challenge['nonce'],
-				'cardea_timestamp' => (string) $challenge['timestamp'],
-				'cardea_salt'      => $challenge['salt'],
-				'cardea_solution'  => 'invalid',
-				'cardea_signature' => $challenge['signature'],
-			)
-		);
-
-		$result = $this->core->verify_rest_comment( array(), $request );
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'cardea_invalid', $result->get_error_code() );
-	}
-
-	/**
-	 * Test verify_rest_comment rejects anonymous submissions with an invalid nonce.
-	 */
-	public function test_verify_rest_comment_rejects_invalid_nonce() {
-		global $current_user;
-		$current_user = null;
-
-		$request = $this->createMockWP_REST_Request(
-			'comment',
-			1,
-			array(
-				'cardea_nonce'     => 'invalid_nonce',
-				'cardea_timestamp' => (string) time(),
-				'cardea_salt'      => 'testsalt',
-				'cardea_solution'  => '12345',
-				'cardea_signature' => 'testsig',
-			)
-		);
-
-		$result = $this->core->verify_rest_comment( array(), $request );
-
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'cardea_security_check', $result->get_error_code() );
-	}
-
-	/**
-	 * Create a mock WP_REST_Request object.
-	 *
-	 * @param string $comment_type Optional comment type to configure.
-	 * @param int    $post_id      Optional post ID to configure.
-	 * @param array  $params       Optional map of additional request parameters.
-	 * @return object
-	 */
-	private function createMockWP_REST_Request( $comment_type = null, $post_id = null, $params = array() ) {
-		return new class( $comment_type, $post_id, $params ) {
-			private $comment_type;
-			private $post_id;
-			private $params;
-
-			public function __construct( $comment_type = null, $post_id = null, $params = array() ) {
-				$this->comment_type = $comment_type;
-				$this->post_id      = $post_id;
-				$this->params       = $params;
-			}
-
-			public function get_param( $param ) {
-				if ( $param === 'comment_type' ) {
-					return $this->comment_type;
-				}
-				if ( $param === 'post_id' ) {
-					return $this->post_id;
-				}
-				return isset( $this->params[ $param ] ) ? $this->params[ $param ] : null;
-			}
-		};
-	}
-
-	/**
 	 * Test rest_get_challenge returns valid challenge data.
 	 */
 	public function test_rest_get_challenge() {
@@ -592,6 +230,35 @@ class Cardea_Core_Test extends PHPUnit\Framework\TestCase {
 
 		$this->assertIsArray( $result );
 		$this->assertArrayHasKey( 'nonce', $result );
+	}
+
+	/**
+	 * Create a minimal mock request object (for the REST challenge endpoint).
+	 *
+	 * @param string $comment_type Optional comment type to configure.
+	 * @param int    $post_id      Optional post ID to configure.
+	 * @return object
+	 */
+	private function createMockWP_REST_Request( $comment_type = null, $post_id = null ) {
+		return new class( $comment_type, $post_id ) {
+			private $comment_type;
+			private $post_id;
+
+			public function __construct( $comment_type = null, $post_id = null ) {
+				$this->comment_type = $comment_type;
+				$this->post_id = $post_id;
+			}
+
+			public function get_param( $param ) {
+				if ( $param === 'comment_type' ) {
+					return $this->comment_type;
+				}
+				if ( $param === 'post_id' ) {
+					return $this->post_id;
+				}
+				return null;
+			}
+		};
 	}
 
 	/**

@@ -26,6 +26,7 @@ define( 'CARDEA_DEFAULT_DIFFICULTY', 4 );
 define( 'CARDEA_DEFAULT_WINDOW', 30 );
 
 require_once CARDEA_PLUGIN_DIR . 'includes/class-cardea-core.php';
+require_once CARDEA_PLUGIN_DIR . 'includes/class-cardea-comment-gate.php';
 require_once CARDEA_PLUGIN_DIR . 'includes/class-cardea-frontend.php';
 require_once CARDEA_PLUGIN_DIR . 'includes/class-cardea-admin.php';
 
@@ -36,10 +37,12 @@ require_once CARDEA_PLUGIN_DIR . 'includes/class-cardea-admin.php';
  */
 function cardea_init() {
 	$core     = new Cardea_Core();
+	$gate     = new Cardea_Comment_Gate( $core );
 	$frontend = new Cardea_Frontend( $core );
 	$admin    = new Cardea_Admin( $core );
 
 	$core->init();
+	$gate->init();
 	$frontend->init();
 	$admin->init();
 }

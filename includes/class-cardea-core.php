@@ -212,10 +212,10 @@ class Cardea_Core {
 
 	/**
 	 * Initialize the plugin.
+	 *
+	 * Comment verification hooks are owned by Cardea_Comment_Gate.
 	 */
 	public function init() {
-		add_action( 'preprocess_comment', array( $this, 'verify_comment_pow' ) );
-		add_filter( 'rest_pre_insert_comment', array( $this, 'verify_rest_comment' ), 10, 2 );
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
 	}
 
@@ -243,155 +243,5 @@ class Cardea_Core {
 	public function rest_get_challenge( $request ) {
 		$post_id = $request->get_param( 'post_id' ) ? (int) $request->get_param( 'post_id' ) : 0;
 		return $this->generate_challenge( $post_id );
-	}
-
-	/**
-	 * Verify PoW on REST API comment submission.
-	 *
-	 * @param array           $prepared_comment Prepared comment data.
-	 * @param WP_REST_Request $request          The request object.
-	 * @return array|WP_Error
-	 */
-	/**
-	 * Verify PoW on REST API comment submission.
-	 *
-	 * Anonymous submissions must provide the same challenge fields as the
-	 * comment form; they are verified by the identical pipeline.
-	 *
-	 * @param array           $prepared_comment Prepared comment data.
-	 * @param WP_REST_Request $request          The request object.
-	 * @return array|WP_Error
-	 */
-	public function verify_rest_comment( $prepared_comment, $request ) {
-		if ( current_user_can( 'moderate_comments' ) ) {
-			return $prepared_comment;
-		}
-
-		$comment_type = $request->get_param( 'comment_type' ) ? $request->get_param( 'comment_type' ) : '';
-		if ( in_array( $comment_type, array( 'pingback', 'trackback' ), true ) ) {
-			return $prepared_comment;
-		}
-
-		if ( is_user_logged_in() ) {
-			return $prepared_comment;
-		}
-
-		$nonce     = $this->get_sanitized_rest_param( $request, 'cardea_nonce' );
-		$timestamp = $this->get_sanitized_rest_param( $request, 'cardea_timestamp' );
-		$salt      = $this->get_sanitized_rest_param( $request, 'cardea_salt' );
-		$solution  = $this->get_sanitized_rest_param( $request, 'cardea_solution' );
-		$signature = $this->get_sanitized_rest_param( $request, 'cardea_signature' );
-
-		if ( empty( $nonce ) || empty( $timestamp ) || empty( $salt ) || empty( $solution ) ) {
-			return new WP_Error(
-				'cardea_missing_fields',
-				self::failure_message(),
-				array( 'status' => 403 )
-			);
-		}
-
-		if ( ! wp_verify_nonce( $nonce, 'cardea_challenge' ) ) {
-			return new WP_Error(
-				'cardea_security_check',
-				self::failure_message(),
-				array( 'status' => 403 )
-			);
-		}
-
-		$challenge = array(
-			'nonce'      => $nonce,
-			'timestamp'  => $timestamp,
-			'salt'       => $salt,
-			'signature'  => $signature,
-			'difficulty' => $this->get_difficulty(),
-		);
-
-		$result = $this->verify_solution( $challenge, $solution );
-
-		if ( is_wp_error( $result ) ) {
-			return new WP_Error(
-				$result->get_error_code(),
-				$result->get_error_message(),
-				array( 'status' => 403 )
-			);
-		}
-
-		return $prepared_comment;
-	}
-
-	/**
-	 * Read and sanitize a plugin parameter from a REST request.
-	 *
-	 * @param object $request The request object.
-	 * @param string $param   Parameter name.
-	 * @return string
-	 */
-	private function get_sanitized_rest_param( $request, $param ) {
-		$value = $request->get_param( $param );
-		return sanitize_text_field( wp_unslash( is_scalar( $value ) ? (string) $value : '' ) );
-	}
-
-	/**
-	 * Verify PoW on comment submission.
-	 *
-	 * @param array $commentdata Comment data.
-	 * @return array|WP_Error
-	 */
-	public function verify_comment_pow( $commentdata ) {
-		if ( current_user_can( 'moderate_comments' ) ) {
-			return $commentdata;
-		}
-
-		$comment_type = isset( $commentdata['comment_type'] ) ? $commentdata['comment_type'] : '';
-		if ( in_array( $comment_type, array( 'pingback', 'trackback' ), true ) ) {
-			return $commentdata;
-		}
-
-		if ( is_user_logged_in() ) {
-			return $commentdata;
-		}
-
-		$nonce     = isset( $_POST['cardea_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_nonce'] ) ) : '';
-		$timestamp = isset( $_POST['cardea_timestamp'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_timestamp'] ) ) : '';
-		$salt      = isset( $_POST['cardea_salt'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_salt'] ) ) : '';
-		$solution  = isset( $_POST['cardea_solution'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_solution'] ) ) : '';
-		$signature = isset( $_POST['cardea_signature'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_signature'] ) ) : '';
-
-		if ( empty( $nonce ) || empty( $timestamp ) || empty( $salt ) || empty( $solution ) ) {
-			$this->die_on_verification_failure();
-		}
-
-		if ( ! wp_verify_nonce( $nonce, 'cardea_challenge' ) ) {
-			$this->die_on_verification_failure();
-		}
-
-		$challenge = array(
-			'nonce'      => $nonce,
-			'timestamp'  => $timestamp,
-			'salt'       => $salt,
-			'signature'  => $signature,
-			'difficulty' => $this->get_difficulty(),
-		);
-
-		$result = $this->verify_solution( $challenge, $solution );
-
-		if ( is_wp_error( $result ) ) {
-			$this->die_on_verification_failure();
-		}
-
-		return $commentdata;
-	}
-
-	/**
-	 * Terminate the request with the generic verification failure message.
-	 *
-	 * @codeCoverageIgnore
-	 */
-	private function die_on_verification_failure() {
-		wp_die(
-			esc_html( self::failure_message() ),
-			esc_html__( 'PoW Verification Failed', 'cardea' ),
-			array( 'response' => 403 )
-		);
 	}
 }
