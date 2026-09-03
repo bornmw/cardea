@@ -13,7 +13,7 @@ Unlike traditional anti-spam solutions that rely on heavy database lookups, CAPT
 
 * **Zero DB Writes on Page Load:** Challenges are generated dynamically using HMAC signatures derived from WordPress salts.
 * **Client-Side Mining:** Heavy SHA-256 computation is offloaded to a background Web Worker, ensuring the main UI thread remains fluid for the user.
-* **Stateless Validation:** The server verifies solutions mathematically. It only records state (via transients) upon a successful submission to prevent replay attacks.
+* **Stateless Validation:** The server verifies solutions mathematically. It only records state in a capped, self-pruning replay store upon a successful submission to prevent replay attacks.
 
 ## Why Choose Cardea?
 

@@ -29,8 +29,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Architecture:
  * - Page load: Generate HMAC-signed challenge (no DB write)
- * - Comment submit: Verify signature + PoW solution, then store transient (DB write)
- * - Replay prevention: Check transient before accepting, auto-expire via WordPress cron
+ * - Comment submit: Verify signature + PoW solution, then record the used signature (DB write)
+ * - Replay prevention: Capped, self-pruning store of used signatures checked before accepting
  *
  * @package Cardea
  */
@@ -44,6 +44,16 @@ class Cardea_Core {
 
 	const OPTION_DIFFICULTY  = 'cardea_difficulty';
 	const OPTION_TIME_WINDOW = 'cardea_time_window';
+
+	/**
+	 * Option name of the replay store (used signatures).
+	 */
+	const USED_OPTION = 'cardea_used';
+
+	/**
+	 * Maximum number of stored used signatures (self-pruning cap).
+	 */
+	const USED_STORE_CAPACITY = 1024;
 
 	/**
 	 * User-facing verification failure message.
@@ -175,8 +185,7 @@ class Cardea_Core {
 			);
 		}
 
-		$used_key = 'cardea_used_' . $challenge['signature'];
-		if ( get_transient( $used_key ) ) {
+		if ( $this->signature_is_used( $challenge['signature'] ) ) {
 			return new WP_Error(
 				'cardea_replay',
 				self::failure_message()
@@ -193,9 +202,78 @@ class Cardea_Core {
 			);
 		}
 
-		set_transient( $used_key, true, $time_window );
+		$this->record_used_signature( $challenge['signature'], $time_window );
 
 		return true;
+	}
+
+	/**
+	 * Whether a challenge signature was already used within its validity window.
+	 *
+	 * @param string $signature Challenge signature.
+	 * @return bool
+	 */
+	public function signature_is_used( $signature ) {
+		$now = time();
+
+		foreach ( $this->get_used_store()['signatures'] as $entry ) {
+			if ( $entry['signature'] === $signature ) {
+				return $now - $entry['time'] < $entry['window'];
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Record a used signature in the replay store.
+	 *
+	 * Expired entries are pruned on write and the store is capped so the
+	 * option size stays bounded under any load.
+	 *
+	 * @param string $signature   Challenge signature.
+	 * @param int    $time_window Validity window in seconds at record time.
+	 * @return void
+	 */
+	public function record_used_signature( $signature, $time_window ) {
+		$store = $this->get_used_store();
+		$now   = time();
+
+		$store['signatures'] = array_values(
+			array_filter(
+				$store['signatures'],
+				static function ( $entry ) use ( $now ) {
+					return $now - $entry['time'] < $entry['window'];
+				}
+			)
+		);
+
+		$store['signatures'][] = array(
+			'signature' => $signature,
+			'time'      => $now,
+			'window'    => $time_window,
+		);
+
+		if ( count( $store['signatures'] ) > self::USED_STORE_CAPACITY ) {
+			$store['signatures'] = array_slice( $store['signatures'], - self::USED_STORE_CAPACITY );
+		}
+
+		update_option( self::USED_OPTION, $store, false );
+	}
+
+	/**
+	 * Fetch the replay store (used signatures).
+	 *
+	 * @return array
+	 */
+	public function get_used_store() {
+		$store = get_option( self::USED_OPTION, array() );
+
+		if ( ! is_array( $store ) || ! isset( $store['signatures'] ) || ! is_array( $store['signatures'] ) ) {
+			$store = array( 'signatures' => array() );
+		}
+
+		return $store;
 	}
 
 	/**
