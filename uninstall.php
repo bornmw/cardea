@@ -10,12 +10,14 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-// 1. Delete the static plugin options.
+// 1. Delete the plugin options (difficulty, time window, replay store).
 delete_option( 'cardea_difficulty' );
 delete_option( 'cardea_time_window' );
+delete_option( 'cardea_used' );
 
-// 2. Delete all replay-protection transients.
-// Transients are stored in the wp_options table with specific prefixes.
+// 2. Delete all legacy replay-protection transients.
+// Older versions stored one transient per used signature; those keys are
+// still swept so uninstalling after an upgrade leaves no residue.
 global $wpdb;
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

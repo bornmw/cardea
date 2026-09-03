@@ -190,6 +190,12 @@ test('should reject tampered signature', async ({ page }) => {
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
+    // Settle the in-page post-submission redirect (WordPress sends the page
+    // to ?unapproved=... after a pending comment) before navigating, so
+    // page.goto below cannot collide with a navigation in flight on slow
+    // runners.
+    await page.waitForLoadState('load');
+
     await page.goto(`${cli.serverUrl}/?p=1`);
     await expect(page.locator('#commentform')).toBeVisible();
 
