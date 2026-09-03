@@ -72,8 +72,18 @@ test.afterAll(async () => {
   }
 });
 
-test.describe('Cardea - XML-RPC Comment Protection', () => {
-  test('should block XML-RPC comment submissions', async ({ request }) => {
+/**
+ * Cardea intentionally does not hook XML-RPC: WordPress core exposes no
+ * anonymous comment-creation method over XML-RPC, and pingbacks/trackbacks
+ * are allowed to bypass the PoW gate by design. The tests below pin those
+ * guarantees with structured assertions instead of accepting any failure as
+ * "blocked".
+ */
+test.describe('Cardea - XML-RPC Surface', () => {
+  test('unknown XML-RPC comment methods are rejected by WordPress core', async ({ request }) => {
+    // wp.newComment is not a WordPress XML-RPC method; core answers with its
+    // structured unknown-method fault. This documents that there is no
+    // anonymous XML-RPC comment path Cardea would have to gate.
     const xmlPayload = `<?xml version="1.0"?>
 <methodCall>
   <methodName>wp.newComment</methodName>
@@ -101,14 +111,11 @@ test.describe('Cardea - XML-RPC Comment Protection', () => {
     });
 
     const responseBody = await response.text();
-    // Either our error or WordPress's error means it's blocked
-    const isBlocked = responseBody.toLowerCase().includes('missing challenge fields') ||
-                      responseBody.toLowerCase().includes('accepts post requests only') ||
-                      response.status() !== 200;
-    expect(isBlocked).toBe(true);
+    expect(responseBody).toContain('<fault');
+    expect(responseBody.toLowerCase()).toContain('unknown method');
   });
 
-  test('should allow XML-RPC pingbacks to bypass PoW', async ({ request }) => {
+  test('XML-RPC pingbacks bypass the PoW gate by design', async ({ request }) => {
     const xmlPayload = `<?xml version="1.0"?>
 <methodCall>
   <methodName>pingback.ping</methodName>
@@ -123,7 +130,8 @@ test.describe('Cardea - XML-RPC Comment Protection', () => {
       data: xmlPayload
     });
 
+    // The pingback path must never be rejected by Cardea's verification.
     const responseBody = await response.text();
-    expect(responseBody.toLowerCase()).not.toContain('missing challenge fields');
+    expect(responseBody.toLowerCase()).not.toContain('could not be verified');
   });
 });

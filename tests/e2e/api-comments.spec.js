@@ -23,6 +23,29 @@
 
 const { test, expect } = require('@playwright/test');
 const { runCLI } = require('@wp-playground/cli');
+const crypto = require('crypto');
+
+/**
+ * Solve the PoW challenge locally (mirrors the client, used to feed the REST parity tests).
+ *
+ * @param {Object} challenge Challenge object from the REST endpoint.
+ * @returns {string} The solution (counter).
+ */
+function solveChallenge(challenge) {
+  const challengeString = challenge.nonce + '|' + challenge.timestamp + '|' + challenge.salt;
+  const prefix = '0'.repeat(challenge.difficulty);
+  let counter = 0;
+  for (;;) {
+    const hash = crypto.createHash('sha256').update(challengeString + counter).digest('hex');
+    if (hash.startsWith(prefix)) {
+      return counter.toString();
+    }
+    counter++;
+    if (counter > 5000000) {
+      throw new Error('Did not find a solution in time');
+    }
+  }
+}
 
 let cli;
 
@@ -89,6 +112,56 @@ test.describe('Cardea - REST API Comment Protection', () => {
     expect(status).toBeLessThan(300);
   });
 
+  test('should block anonymous REST API comments without PoW fields', async ({ request }) => {
+    const response = await request.post(`${cli.serverUrl}/wp-json/wp/v2/comments`, {
+      data: {
+        post: 1,
+        author_name: 'Anonymous',
+        author_email: 'anon@example.com',
+        content: 'Anonymous comment without challenge fields.'
+      }
+    });
+
+    expect(response.status()).toBe(403);
+    const body = await response.text();
+    expect(body.toLowerCase()).toContain('could not be verified');
+  });
+
+  test('should accept anonymous REST API comments with a valid PoW solution', async ({ request }) => {
+    const challengeResponse = await request.get(`${cli.serverUrl}/wp-json/cardea/v1/challenge?post_id=1`);
+    expect(challengeResponse.status()).toBe(200);
+    const challenge = await challengeResponse.json();
+    const solution = solveChallenge(challenge);
+
+    const response = await request.post(`${cli.serverUrl}/wp-json/wp/v2/comments`, {
+      data: {
+        post: 1,
+        author_name: 'REST PoW User',
+        author_email: 'rest-pow@example.com',
+        content: 'Anonymous comment with a valid PoW solution.',
+        cardea_nonce: challenge.nonce,
+        cardea_timestamp: String(challenge.timestamp),
+        cardea_salt: challenge.salt,
+        cardea_solution: solution,
+        cardea_signature: challenge.signature
+      }
+    });
+
+    expect(response.status()).toBe(201);
+    const created = await response.json();
+    expect(created.id).toBeGreaterThan(0);
+
+    // The comment is pending moderation for anonymous authors; verify it was
+    // actually stored by reading the comments list with admin authentication.
+    const commentsResponse = await request.get(`${cli.serverUrl}/wp-json/wp/v2/comments?post=1&per_page=50`, {
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from('admin:password').toString('base64')
+      }
+    });
+    const comments = await commentsResponse.json();
+    expect(comments.some(c => c.content.rendered.includes('Anonymous comment with a valid PoW solution.'))).toBe(true);
+  });
+
   test('should allow pingbacks via REST API', async ({ request }) => {
     const response = await request.post(`${cli.serverUrl}/wp-json/wp/v2/comments`, {
       data: {
@@ -101,6 +174,6 @@ test.describe('Cardea - REST API Comment Protection', () => {
     });
 
     const responseText = await response.text();
-    expect(responseText.toLowerCase()).not.toContain('missing challenge fields');
+    expect(responseText.toLowerCase()).not.toContain('could not be verified');
   });
 });

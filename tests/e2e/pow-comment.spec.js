@@ -131,7 +131,7 @@ test.describe('Cardea - Proof-of-Work Comment Spam Protection', () => {
       HTMLFormElement.prototype.submit.call(clone);
     });
 
-    await expect(page.locator('.wp-die-message')).toContainText('Missing', { ignoreCase: true });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true });
   });
 
 test('should reject tampered signature', async ({ page }) => {
@@ -157,7 +157,7 @@ test('should reject tampered signature', async ({ page }) => {
       HTMLFormElement.prototype.submit.call(clone);
     });
 
-    await expect(page.locator('.wp-die-message')).toContainText('signature', { ignoreCase: true });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true });
   });
 
   test('should reject tampered timestamp', async ({ page }) => {
@@ -183,7 +183,7 @@ test('should reject tampered signature', async ({ page }) => {
       HTMLFormElement.prototype.submit.call(clone);
     });
 
-    await expect(page.locator('.wp-die-message')).toContainText(/signature|expired/i, { timeout: 10000 });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true, timeout: 10000 });
   });
 
   test('should reject replay attacks (same valid payload submitted twice)', async ({ page }) => {
@@ -247,7 +247,7 @@ test('should reject tampered signature', async ({ page }) => {
       HTMLFormElement.prototype.submit.call(clone);
     }, payload);
 
-    await expect(page.locator('.wp-die-message')).toContainText('already been used', { ignoreCase: true });
+    await expect(page.locator('.wp-die-message')).toContainText('could not be verified', { ignoreCase: true });
   });
 
   test('should work without Web Worker support', async ({ page }) => {
@@ -365,7 +365,7 @@ test.describe('Cardea - Admin Dashboard Reply', () => {
         await page.waitForTimeout(3000);
 
         const pageText = await page.locator('body').textContent();
-        expect(pageText.toLowerCase()).not.toContain('missing challenge fields');
+        expect(pageText.toLowerCase()).not.toContain('could not be verified');
         expect(pageText.toLowerCase()).not.toContain('pow verification failed');
       } else {
         // Form didn't appear, skip
@@ -374,7 +374,7 @@ test.describe('Cardea - Admin Dashboard Reply', () => {
     } else {
       // No comments to reply to - verify we can at least access wp-admin without PoW errors
       const pageText = await page.locator('body').textContent();
-      expect(pageText.toLowerCase()).not.toContain('missing challenge fields');
+      expect(pageText.toLowerCase()).not.toContain('could not be verified');
       expect(pageText.toLowerCase()).not.toContain('pow verification failed');
     }
   });

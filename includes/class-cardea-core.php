@@ -46,6 +46,19 @@ class Cardea_Core {
 	const OPTION_TIME_WINDOW = 'cardea_time_window';
 
 	/**
+	 * User-facing verification failure message.
+	 *
+	 * One generic message for every failure mode: it stays actionable for
+	 * legitimate users (refresh and retry) without revealing which check
+	 * failed, so it cannot be used as an attack oracle.
+	 *
+	 * @return string Localized message.
+	 */
+	public static function failure_message() {
+		return __( 'Your comment could not be verified. Please refresh the page and try again.', 'cardea' );
+	}
+
+	/**
 	 * Get the difficulty level (number of leading zeros required).
 	 *
 	 * @return int
@@ -141,14 +154,14 @@ class Cardea_Core {
 		if ( empty( $challenge['nonce'] ) || empty( $solution ) ) {
 			return new WP_Error(
 				'cardea_missing_fields',
-				__( 'Missing challenge or solution fields.', 'cardea' )
+				self::failure_message()
 			);
 		}
 
 		if ( ! $this->verify_signature( $challenge ) ) {
 			return new WP_Error(
 				'cardea_invalid_signature',
-				__( 'Challenge signature verification failed.', 'cardea' )
+				self::failure_message()
 			);
 		}
 
@@ -158,7 +171,7 @@ class Cardea_Core {
 		if ( time() - $timestamp > $time_window ) {
 			return new WP_Error(
 				'cardea_expired',
-				__( 'Challenge has expired. Please refresh the page and try again.', 'cardea' )
+				self::failure_message()
 			);
 		}
 
@@ -166,7 +179,7 @@ class Cardea_Core {
 		if ( get_transient( $used_key ) ) {
 			return new WP_Error(
 				'cardea_replay',
-				__( 'This challenge has already been used.', 'cardea' )
+				self::failure_message()
 			);
 		}
 
@@ -176,7 +189,7 @@ class Cardea_Core {
 		if ( ! $this->hash_meets_difficulty( $hash, $challenge['difficulty'] ) ) {
 			return new WP_Error(
 				'cardea_invalid',
-				__( 'Proof-of-Work verification failed.', 'cardea' )
+				self::failure_message()
 			);
 		}
 
@@ -239,6 +252,16 @@ class Cardea_Core {
 	 * @param WP_REST_Request $request          The request object.
 	 * @return array|WP_Error
 	 */
+	/**
+	 * Verify PoW on REST API comment submission.
+	 *
+	 * Anonymous submissions must provide the same challenge fields as the
+	 * comment form; they are verified by the identical pipeline.
+	 *
+	 * @param array           $prepared_comment Prepared comment data.
+	 * @param WP_REST_Request $request          The request object.
+	 * @return array|WP_Error
+	 */
 	public function verify_rest_comment( $prepared_comment, $request ) {
 		if ( current_user_can( 'moderate_comments' ) ) {
 			return $prepared_comment;
@@ -253,11 +276,59 @@ class Cardea_Core {
 			return $prepared_comment;
 		}
 
-		return new WP_Error(
-			'cardea_missing_fields',
-			__( 'Missing challenge fields.', 'cardea' ),
-			array( 'status' => 403 )
+		$nonce     = $this->get_sanitized_rest_param( $request, 'cardea_nonce' );
+		$timestamp = $this->get_sanitized_rest_param( $request, 'cardea_timestamp' );
+		$salt      = $this->get_sanitized_rest_param( $request, 'cardea_salt' );
+		$solution  = $this->get_sanitized_rest_param( $request, 'cardea_solution' );
+		$signature = $this->get_sanitized_rest_param( $request, 'cardea_signature' );
+
+		if ( empty( $nonce ) || empty( $timestamp ) || empty( $salt ) || empty( $solution ) ) {
+			return new WP_Error(
+				'cardea_missing_fields',
+				self::failure_message(),
+				array( 'status' => 403 )
+			);
+		}
+
+		if ( ! wp_verify_nonce( $nonce, 'cardea_challenge' ) ) {
+			return new WP_Error(
+				'cardea_security_check',
+				self::failure_message(),
+				array( 'status' => 403 )
+			);
+		}
+
+		$challenge = array(
+			'nonce'      => $nonce,
+			'timestamp'  => $timestamp,
+			'salt'       => $salt,
+			'signature'  => $signature,
+			'difficulty' => $this->get_difficulty(),
 		);
+
+		$result = $this->verify_solution( $challenge, $solution );
+
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error(
+				$result->get_error_code(),
+				$result->get_error_message(),
+				array( 'status' => 403 )
+			);
+		}
+
+		return $prepared_comment;
+	}
+
+	/**
+	 * Read and sanitize a plugin parameter from a REST request.
+	 *
+	 * @param object $request The request object.
+	 * @param string $param   Parameter name.
+	 * @return string
+	 */
+	private function get_sanitized_rest_param( $request, $param ) {
+		$value = $request->get_param( $param );
+		return sanitize_text_field( wp_unslash( is_scalar( $value ) ? (string) $value : '' ) );
 	}
 
 	/**
@@ -287,19 +358,11 @@ class Cardea_Core {
 		$signature = isset( $_POST['cardea_signature'] ) ? sanitize_text_field( wp_unslash( $_POST['cardea_signature'] ) ) : '';
 
 		if ( empty( $nonce ) || empty( $timestamp ) || empty( $salt ) || empty( $solution ) ) {
-			wp_die(
-				esc_html__( 'Missing challenge fields.', 'cardea' ),
-				esc_html__( 'PoW Verification Failed', 'cardea' ),
-				array( 'response' => 403 )
-			);
+			$this->die_on_verification_failure();
 		}
 
 		if ( ! wp_verify_nonce( $nonce, 'cardea_challenge' ) ) {
-			wp_die(
-				esc_html__( 'Security check failed.', 'cardea' ),
-				esc_html__( 'PoW Verification Failed', 'cardea' ),
-				array( 'response' => 403 )
-			);
+			$this->die_on_verification_failure();
 		}
 
 		$challenge = array(
@@ -307,19 +370,28 @@ class Cardea_Core {
 			'timestamp'  => $timestamp,
 			'salt'       => $salt,
 			'signature'  => $signature,
-			'difficulty' => (int) get_option( self::OPTION_DIFFICULTY, CARDEA_DEFAULT_DIFFICULTY ),
+			'difficulty' => $this->get_difficulty(),
 		);
 
 		$result = $this->verify_solution( $challenge, $solution );
 
 		if ( is_wp_error( $result ) ) {
-			wp_die(
-				esc_html( $result->get_error_message() ),
-				esc_html__( 'PoW Verification Failed', 'cardea' ),
-				array( 'response' => 403 )
-			);
+			$this->die_on_verification_failure();
 		}
 
 		return $commentdata;
+	}
+
+	/**
+	 * Terminate the request with the generic verification failure message.
+	 *
+	 * @codeCoverageIgnore
+	 */
+	private function die_on_verification_failure() {
+		wp_die(
+			esc_html( self::failure_message() ),
+			esc_html__( 'PoW Verification Failed', 'cardea' ),
+			array( 'response' => 403 )
+		);
 	}
 }

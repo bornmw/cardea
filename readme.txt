@@ -54,7 +54,7 @@ To view the source code, contribute, or report issues, visit the [Cardea GitHub 
 * **Non-Intrusive** - Works transparently for legitimate users; spammers must complete the PoW challenge.
 * **WordPress Standards** - Follows WordPress coding standards and best practices.
 * **Privacy First (GDPR Friendly)** - No cookies, no user tracking, no CAPTCHA popups, and absolutely zero data sent to third-party cloud APIs.
-* **Smart Pathway Protection** - Flawlessly protects frontend forms and blocks XML-RPC botnets, while seamlessly allowing native Trackbacks and authenticated REST API requests.
+* **Smart Pathway Protection** - Protects the frontend comment form and anonymous REST API comment submissions with the same Proof-of-Work gate, while allowing native Trackbacks/Pingbacks and authenticated requests.
 * **Page Caching Compatible** - Uses dynamic REST API endpoint to fetch fresh challenges, ensuring compatibility with edge caching (Cloudflare, Varnish) and full-page caching plugins.
 * **Logged-In User Bypass** - Skips PoW challenge for authenticated users, eliminating unnecessary CPU usage on the frontend.
 
@@ -72,6 +72,7 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 * Localized replay protection using WordPress transients
 * Auto-cleaning expired tokens via WordPress cron
 * Single verification pass: signature check + PoW validation
+* Single-use tokens: a challenge can be redeemed exactly once, which bounds any interception-style attack to a single comment (standard one-shot-token semantics)
 
 **Testing Stack:**
 * **PHPUnit** - Backend logic verification (HMAC generation, challenge validation, replay prevention)
@@ -104,9 +105,9 @@ Yes, but the mining may take slightly longer on older or slower mobile devices. 
 
 This plugin primarily protects against automated bots. For human-spammers, consider using additional measures like moderation queues or other anti-spam plugins.
 
-= Will this affect SEO bots or REST API submissions? =
+ = Will this affect SEO bots or REST API submissions? =
 
-This plugin only affects the native WordPress comment form. REST API comments, XML-RPC, and other methods are not affected.
+Anonymous comment submissions are gated everywhere: the comment form and the REST API (`wp/v2/comments`) both require a solved PoW challenge. Trackbacks, pingbacks, XML-RPC calls, and requests from logged-in users or moderators are not affected. Note that WordPress core does not expose anonymous comment creation over XML-RPC at all, so no Cardea hook is needed there.
 
 = Does it track users? =
 

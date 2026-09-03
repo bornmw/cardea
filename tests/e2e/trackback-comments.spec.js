@@ -87,7 +87,7 @@ test.describe('Cardea - Trackback/Pingback Protection', () => {
     });
 
     const responseBody = await response.text();
-    expect(responseBody).not.toContain('Missing challenge fields');
+    expect(responseBody).not.toContain('could not be verified');
   });
 
   test('should allow pingbacks to bypass PoW', async ({ request }) => {
@@ -104,6 +104,6 @@ test.describe('Cardea - Trackback/Pingback Protection', () => {
     });
 
     const responseBody = await response.text();
-    expect(responseBody).not.toContain('Missing challenge fields');
+    expect(responseBody).not.toContain('could not be verified');
   });
 });
