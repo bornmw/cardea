@@ -164,7 +164,7 @@ class Cardea_Admin {
 		<p class="description">
 			<?php
 			esc_html_e(
-				'Number of leading zeros required in the hash. Recommended: 3-5. Higher values provide stronger protection but require more computation.',
+				'Number of leading zeros required in the hash. Recommended: 3-5. Higher values provide stronger protection but require more computation. Expected solve time on a typical laptop CPU: about 0.1s at 3, 1-2s at 4, 10-30s at 5.',
 				'cardea'
 			);
 			?>

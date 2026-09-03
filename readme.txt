@@ -39,7 +39,7 @@ To view the source code, contribute, or report issues, visit the [Cardea GitHub 
 1. **Challenge Generation**: When a page with a comment form loads, the server generates a cryptographically signed challenge using HMAC-SHA256. No database write occurs at this stage.
 2. **Client-Side Mining**: When a user focuses on the comment textarea, a JavaScript Web Worker begins mining in the background.
 3. **Solution Discovery**: The worker repeatedly hashes the challenge string (nonce + timestamp + salt) with incrementing counter values until it finds a hash with the required number of leading zeros.
-4. **Server Verification**: On submission, the server first verifies the HMAC signature (ensuring the challenge wasn't tampered with), then validates the PoW solution, and finally stores a transient to prevent replay attacks.
+4. **Server Verification**: On submission, the server first verifies the HMAC signature (ensuring the challenge wasn't tampered with), then validates the PoW solution, and finally records the used signature in a capped, self-pruning replay store to prevent replay attacks.
 
 === Features ===
 
@@ -47,7 +47,7 @@ To view the source code, contribute, or report issues, visit the [Cardea GitHub 
 * **Zero Dependencies** - No external APIs or services required.
 * **Client-Side Mining** - Heavy computation happens in the user's browser using Web Workers.
 * **Deferred Execution** - The cryptographic mining engine only spins up when a user interacts with the comment field, ensuring casual readers incur zero performance penalty.
-* **Self-Cleaning Replay Protection** - Server-side state is only stored upon a successful comment submission to prevent bot replay attacks, and expired tokens are automatically swept by WordPress cron.
+* **Self-Cleaning Replay Protection** - Server-side state is only stored upon a successful comment submission to prevent bot replay attacks; expired entries are pruned automatically and the store is capped (1024 signatures).
 * **Server-Side Verification** - Server verifies HMAC signature first, then performs SHA-256 PoW validation.
 * **Configurable Difficulty** - Adjust the number of leading zeros required (1-8).
 * **Configurable Time Window** - Set how long challenges remain valid (5-120 minutes).
@@ -69,8 +69,8 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 * Skip PoW for logged-in users (zero CPU overhead for authenticated commenters)
 
 **Backend Architecture:**
-* Localized replay protection using WordPress transients
-* Auto-cleaning expired tokens via WordPress cron
+* Localized replay protection via a capped replay store (single option, no per-token rows)
+* Self-pruning: expired entries are cleared automatically on write (no cron dependency)
 * Single verification pass: signature check + PoW validation
 * Single-use tokens: a challenge can be redeemed exactly once, which bounds any interception-style attack to a single comment (standard one-shot-token semantics)
 
@@ -131,7 +131,7 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 
 **Architecture:**
 * **Zero Database Bloat on Load** - Stateless HMAC signatures ensure zero database writes on page load
-* **Self-Cleaning Replay Protection** - Uses WordPress transients that auto-expire via cron
+* **Self-Cleaning Replay Protection** - Uses a capped replay store that prunes expired entries automatically
 * **Deferred Execution** - Mining only starts when user interacts with comment field
 
 **Testing Stack:**
@@ -154,7 +154,7 @@ Cardea is built with an enterprise-grade engineering stack focused on reliabilit
 * Web Worker-based client-side mining
 * Admin settings page
 * Configurable difficulty and time window
-* Self-cleaning replay protection via WordPress transients
+* Self-cleaning replay protection via a capped, self-pruning store
 
 == Upgrade Notice ==
 
