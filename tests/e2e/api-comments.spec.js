@@ -112,7 +112,9 @@ test.describe('Cardea - REST API Comment Protection', () => {
     expect(status).toBeLessThan(300);
   });
 
-  test('should block anonymous REST API comments without PoW fields', async ({ request }) => {
+  test('anonymous REST API comments are rejected by WordPress core', async ({ request }) => {
+    // WordPress core requires login for anonymous comment creation via the
+    // REST API (rest_comment_login_required), before any Cardea check runs.
     const response = await request.post(`${cli.serverUrl}/wp-json/wp/v2/comments`, {
       data: {
         post: 1,
@@ -122,12 +124,16 @@ test.describe('Cardea - REST API Comment Protection', () => {
       }
     });
 
-    expect(response.status()).toBe(403);
+    expect(response.status()).toBe(401);
     const body = await response.text();
-    expect(body.toLowerCase()).toContain('could not be verified');
+    expect(body).toContain('rest_comment_login_required');
   });
 
-  test('should accept anonymous REST API comments with a valid PoW solution', async ({ request }) => {
+  test('a valid PoW solution does not bypass the core login requirement', async ({ request }) => {
+    // Defense in depth: Cardea's own rest_pre_insert_comment gate applies the
+    // same PoW pipeline to any anonymous REST comment creation that core
+    // allows. Today core blocks it with 401 first; if core ever changes that
+    // policy, this test forces an explicit decision instead of a silent gap.
     const challengeResponse = await request.get(`${cli.serverUrl}/wp-json/cardea/v1/challenge?post_id=1`);
     expect(challengeResponse.status()).toBe(200);
     const challenge = await challengeResponse.json();
@@ -147,19 +153,9 @@ test.describe('Cardea - REST API Comment Protection', () => {
       }
     });
 
-    expect(response.status()).toBe(201);
-    const created = await response.json();
-    expect(created.id).toBeGreaterThan(0);
-
-    // The comment is pending moderation for anonymous authors; verify it was
-    // actually stored by reading the comments list with admin authentication.
-    const commentsResponse = await request.get(`${cli.serverUrl}/wp-json/wp/v2/comments?post=1&per_page=50`, {
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from('admin:password').toString('base64')
-      }
-    });
-    const comments = await commentsResponse.json();
-    expect(comments.some(c => c.content.rendered.includes('Anonymous comment with a valid PoW solution.'))).toBe(true);
+    expect(response.status()).toBe(401);
+    const body = await response.text();
+    expect(body).toContain('rest_comment_login_required');
   });
 
   test('should allow pingbacks via REST API', async ({ request }) => {

@@ -54,7 +54,7 @@ To view the source code, contribute, or report issues, visit the [Cardea GitHub 
 * **Non-Intrusive** - Works transparently for legitimate users; spammers must complete the PoW challenge.
 * **WordPress Standards** - Follows WordPress coding standards and best practices.
 * **Privacy First (GDPR Friendly)** - No cookies, no user tracking, no CAPTCHA popups, and absolutely zero data sent to third-party cloud APIs.
-* **Smart Pathway Protection** - Protects the frontend comment form and anonymous REST API comment submissions with the same Proof-of-Work gate, while allowing native Trackbacks/Pingbacks and authenticated requests.
+* **Smart Pathway Protection** - Gates anonymous comment submission end to end: the comment form requires a solved Proof-of-Work challenge, and anonymous REST comment creation is already rejected by WordPress core (401) — Cardea additionally applies the same PoW check to any REST comment creation core permits, as a defense-in-depth layer. Native Trackbacks/Pingbacks and authenticated requests are allowed.
 * **Page Caching Compatible** - Uses dynamic REST API endpoint to fetch fresh challenges, ensuring compatibility with edge caching (Cloudflare, Varnish) and full-page caching plugins.
 * **Logged-In User Bypass** - Skips PoW challenge for authenticated users, eliminating unnecessary CPU usage on the frontend.
 
@@ -107,7 +107,7 @@ This plugin primarily protects against automated bots. For human-spammers, consi
 
  = Will this affect SEO bots or REST API submissions? =
 
-Anonymous comment submissions are gated everywhere: the comment form and the REST API (`wp/v2/comments`) both require a solved PoW challenge. Trackbacks, pingbacks, XML-RPC calls, and requests from logged-in users or moderators are not affected. Note that WordPress core does not expose anonymous comment creation over XML-RPC at all, so no Cardea hook is needed there.
+Anonymous comment submissions are gated everywhere. In the comment form, a solved PoW challenge is required. For the REST API (`wp/v2/comments`), WordPress core already rejects anonymous comment creation with a 401 (`rest_comment_login_required`); Cardea additionally runs the same PoW verification on `rest_pre_insert_comment`, so if core ever permits anonymous REST comments, they will still need a solved challenge. Trackbacks, pingbacks, XML-RPC calls, and requests from logged-in users or moderators are not affected. WordPress core does not expose anonymous comment creation over XML-RPC either, so no Cardea hook is needed there.
 
 = Does it track users? =
 
