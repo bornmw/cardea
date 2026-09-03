@@ -47,32 +47,22 @@ test-e2e:
 # ==========================================
 # PACKAGING
 # ==========================================
+# Paths excluded from the distributed plugin. Single source of truth, shared
+# by `make package` (zip) and `make sync-svn` (rsync) so the two can never
+# drift apart.
+EXCLUDE_DIRS  := node_modules vendor tests dist .github .playwright-browsers playwright-report test-results wp-assets design
+EXCLUDE_FILES := .phpunit.result.cache phpunit.xml playwright.config.js Dockerfile .dockerignore Makefile README.md
+EXCLUDE_GLOBS := *.git* composer.* package*.json
+
+ZIP_EXCLUDES := $(foreach entry,$(EXCLUDE_DIRS),\"$(entry)/*\") $(foreach entry,$(EXCLUDE_FILES),\"$(entry)\") $(foreach entry,$(EXCLUDE_GLOBS),\"$(entry)\")
+RSYNC_EXCLUDES := $(foreach entry,$(EXCLUDE_DIRS),--exclude=$(entry)/) $(foreach entry,$(EXCLUDE_FILES),--exclude=$(entry)) $(foreach entry,$(EXCLUDE_GLOBS),--exclude=$(entry))
+
 package:
 	@echo "Packaging $(PLUGIN_SLUG) version $(VERSION)..."
 	@mkdir -p dist
 	@rm -f dist/$(PLUGIN_SLUG).zip
-	@# Use a temporary directory to ensure only the necessary files are zipped
-	@zip -r dist/$(PLUGIN_SLUG).zip . \
-		-x "*.git*" \
-		-x "node_modules/*" \
-		-x "vendor/*" \
-		-x "tests/*" \
-		-x "dist/*" \
-		-x ".github/*" \
-		-x ".playwright-browsers/*" \
-		-x "playwright-report/*" \
-		-x "test-results/*" \
-		-x ".phpunit.result.cache" \
-		-x "phpunit.xml" \
-		-x "playwright.config.js" \
-		-x "composer.*" \
-		-x "package*.json" \
-		-x "Dockerfile" \
-		-x ".dockerignore" \
-		-x "Makefile" \
-		-x "README.md" \
-		-x "wp-assets/*" \
-		-x "design/*"
+	@# Zip only the plugin files (exclusion list above keeps dev artifacts out)
+	@zip -r dist/$(PLUGIN_SLUG).zip . -x $(ZIP_EXCLUDES)
 	@echo "Package created at dist/$(PLUGIN_SLUG).zip"
 
 # ==========================================
@@ -86,29 +76,7 @@ sync-svn:
 	@if [ ! -d "$(SVN_DIR)" ]; then echo "Error: SVN directory $(SVN_DIR) does not exist."; exit 1; fi
 
 	@echo "--> Mirroring production files to $(SVN_DIR)/trunk/"
-	@rsync -av --delete \
-		--exclude=".*" \
-		--exclude="*.git*" \
-		--exclude="node_modules/" \
-		--exclude="vendor/" \
-		--exclude="tests/" \
-		--exclude="dist/" \
-		--exclude=".github/" \
-		--exclude=".playwright-browsers/" \
-		--exclude="playwright-report/" \
-		--exclude="test-results/" \
-		--exclude=".phpunit.result.cache" \
-		--exclude="phpunit.xml" \
-		--exclude="playwright.config.js" \
-		--exclude="composer.*" \
-		--exclude="package*.json" \
-		--exclude="Dockerfile" \
-		--exclude=".dockerignore" \
-		--exclude="Makefile" \
-		--exclude="README.md" \
-		--exclude="wp-assets/" \
-		--exclude="design/" \
-		./ $(SVN_DIR)/trunk/
+	@rsync -av --delete $(RSYNC_EXCLUDES) ./ $(SVN_DIR)/trunk/
 
 	@echo "--> Mirroring repository assets to $(SVN_DIR)/assets/"
 	@rsync -av --delete ./wp-assets/ $(SVN_DIR)/assets/
